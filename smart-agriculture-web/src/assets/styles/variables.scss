@@ -1,0 +1,63 @@
+:root {
+  --app-bg: #f5f8f6;
+  --app-bg-soft: #eef4f1;
+  --app-panel: rgba(255, 255, 255, 0.94);
+  --app-panel-strong: #ffffff;
+  --app-panel-soft: #f8fbfa;
+  --app-border: rgba(17, 82, 62, 0.10);
+  --app-border-strong: rgba(17, 82, 62, 0.16);
+  --app-shadow-xs: 0 4px 12px rgba(17, 37, 31, 0.035);
+  --app-shadow: 0 8px 22px rgba(17, 37, 31, 0.055);
+  --app-shadow-lg: 0 14px 34px rgba(17, 37, 31, 0.075);
+  --app-shadow-hover: 0 12px 26px rgba(17, 37, 31, 0.085);
+  --app-shadow-hero: 0 12px 26px rgba(17, 53, 43, 0.10);
+
+  --app-primary: #178a62;
+  --app-primary-dark: #0f6f50;
+  --app-primary-soft: #eaf6f0;
+  --app-primary-soft-strong: #dff1e8;
+  --app-secondary: #0f766e;
+  --app-tech: #4c8bf5;
+  --app-tech-soft: #edf3ff;
+  --app-accent: #f2b544;
+  --app-accent-soft: #fff5de;
+  --app-danger: #e75a4d;
+  --app-danger-soft: #fdeceb;
+
+  --app-text: #17312a;
+  --app-text-secondary: #5c726c;
+  --app-text-tertiary: #7d918b;
+
+  --app-menu-bg: linear-gradient(180deg, #113a34 0%, #10302d 60%, #0f2a2a 100%);
+  --app-header-bg: rgba(255, 255, 255, 0.86);
+  --app-hero-gradient: linear-gradient(135deg, #17483f 0%, #166257 55%, #21786f 100%);
+  --app-hero-gradient-cool: linear-gradient(135deg, #19374a 0%, #1d566e 55%, #17726c 100%);
+  --app-hero-gradient-warn: linear-gradient(135deg, #5b3725 0%, #8d511d 56%, #cf7d18 100%);
+
+  --app-radius-xs: 10px;
+  --app-radius-sm: 14px;
+  --app-radius-md: 18px;
+  --app-radius: 20px;
+  --app-radius-lg: 24px;
+
+  --app-content-max-width: 1440px;
+  --app-content-padding: 20px;
+  --app-content-padding-x: 20px;
+  --app-section-gap: 16px;
+  --app-grid-gap: 16px;
+  --app-card-padding: 18px;
+  --app-card-content-gap: 12px;
+  --app-banner-padding-y: 18px;
+  --app-banner-padding-x: 20px;
+  --app-page-gap: 16px;
+
+  --app-banner-min-height: 84px;
+  --app-card-min-height: 104px;
+  --app-stat-card-height: 120px;
+  --app-summary-card-height: 148px;
+  --app-panel-card-height: 224px;
+  --app-chart-card-height: 300px;
+  --app-table-card-height: 360px;
+  --app-control-height: 40px;
+  --app-panel-header-height: 52px;
+}

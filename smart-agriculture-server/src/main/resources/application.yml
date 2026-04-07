@@ -1,0 +1,81 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+spring:
+  application:
+    name: 智慧农业管理系统后端
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/smart_agriculture?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    username: root
+    password: 1234
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+
+mybatis-plus:
+  mapper-locations: classpath*:/mapper/**/*.xml
+  type-aliases-package: com.smartagri.modules.*.entity
+  configuration:
+    map-underscore-to-camel-case: true
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+  global-config:
+    db-config:
+      id-type: assign_id
+
+springdoc:
+  api-docs:
+    enabled: true
+    path: /v3/api-docs
+  swagger-ui:
+    enabled: true
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+smart-agri:
+  jwt:
+    secret-key: smart-agriculture-demo-secret-key-change-me-123456
+    expire-hours: 12
+    issuer: smart-agriculture-server
+    token-prefix: Bearer
+    header-name: Authorization
+    ignore-urls:
+      - /auth/login
+      - /swagger-ui.html
+      - /swagger-ui/**
+      - /v3/api-docs/**
+      - /doc.html
+  ai:
+    mock-enabled: true
+    provider: ${SMART_AGRI_AI_PROVIDER:openai-compatible}
+    model-name: ${SMART_AGRI_AI_MODEL:gpt-4.1-mini}
+    fallback-to-mock: ${SMART_AGRI_AI_FALLBACK_TO_MOCK:true}
+    base-url: ${SMART_AGRI_AI_BASE_URL:https://api.openai.com/v1}
+    api-key: ${SMART_AGRI_AI_API_KEY:}
+    chat-path: ${SMART_AGRI_AI_CHAT_PATH:/chat/completions}
+    temperature: ${SMART_AGRI_AI_TEMPERATURE:0.4}
+    max-tokens: ${SMART_AGRI_AI_MAX_TOKENS:1200}
+    connect-timeout-seconds: ${SMART_AGRI_AI_CONNECT_TIMEOUT:10}
+    read-timeout-seconds: ${SMART_AGRI_AI_READ_TIMEOUT:60}
+  warning:
+    auto-migrate-closure-schema: true
+    rule:
+      soil-moisture-low-threshold: ${SMART_AGRI_RULE_SOIL_MOISTURE_LOW:30}
+      temperature-high-threshold: ${SMART_AGRI_RULE_TEMPERATURE_HIGH:32}
+      temperature-low-threshold: ${SMART_AGRI_RULE_TEMPERATURE_LOW:10}
+      light-low-threshold: ${SMART_AGRI_RULE_LIGHT_LOW:5000}
+      light-high-threshold: ${SMART_AGRI_RULE_LIGHT_HIGH:50000}
+  inspection:
+    enabled: ${SMART_AGRI_INSPECTION_ENABLED:true}
+    initial-delay-ms: ${SMART_AGRI_INSPECTION_INITIAL_DELAY_MS:15000}
+    fixed-delay-ms: ${SMART_AGRI_INSPECTION_FIXED_DELAY_MS:60000}
+    env-lookback-minutes: ${SMART_AGRI_INSPECTION_ENV_LOOKBACK_MINUTES:10}
+    env-batch-size: ${SMART_AGRI_INSPECTION_ENV_BATCH_SIZE:200}
+    device-batch-size: ${SMART_AGRI_INSPECTION_DEVICE_BATCH_SIZE:200}
