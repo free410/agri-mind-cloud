@@ -36,4 +36,21 @@ pnpm-debug.log*
 **/.env
 **/.env.*
 !**/.env.example
+!**/.env.docker.neo4j.example
+.env.docker.neo4j
+
+# 本地 Spring 覆盖（可含数据库口令、JWT 密钥等）
+**/application-local.yml
+**/application-local.properties
+
+# Python
+**/__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+
+# 前端本地环境
+**/.env.local
+**/.env.*.local
 

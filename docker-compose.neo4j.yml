@@ -1,0 +1,19 @@
+# 农业知识图谱（Neo4j）本地开发
+# 1) 复制 .env.docker.neo4j.example 为 .env.docker.neo4j，修改 NEO4J_AUTH 中的密码（勿提交该文件）
+# 2) docker compose -f docker-compose.neo4j.yml up -d
+# 浏览器：http://localhost:7474 （用户名 neo4j，密码为 NEO4J_AUTH 中 / 右侧部分）
+
+services:
+  smartagri-neo4j:
+    image: neo4j:5.26-community
+    container_name: smartagri-neo4j
+    ports:
+      - "7474:7474"
+      - "7687:7687"
+    env_file:
+      - .env.docker.neo4j
+    volumes:
+      - smartagri_neo4j_data:/data
+
+volumes:
+  smartagri_neo4j_data:
