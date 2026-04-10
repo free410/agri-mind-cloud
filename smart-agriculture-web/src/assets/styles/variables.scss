@@ -1,16 +1,21 @@
 :root {
-  --app-bg: #f5f8f6;
-  --app-bg-soft: #eef4f1;
-  --app-panel: rgba(255, 255, 255, 0.94);
+  --app-bg: #f3f8f5;
+  --app-bg-soft: #edf5f1;
+  --app-bg-gradient: linear-gradient(180deg, #f7fcf9 0%, #eef6f2 52%, #e9f2ee 100%);
+  --app-bg-grid-line: rgba(28, 111, 80, 0.045);
+  --app-bg-grid-line-strong: rgba(28, 111, 80, 0.07);
+  --app-bg-glow-green: rgba(35, 148, 102, 0.12);
+  --app-bg-glow-tech: rgba(76, 139, 245, 0.08);
+  --app-panel: rgba(255, 255, 255, 0.95);
   --app-panel-strong: #ffffff;
-  --app-panel-soft: #f8fbfa;
-  --app-border: rgba(17, 82, 62, 0.10);
-  --app-border-strong: rgba(17, 82, 62, 0.16);
-  --app-shadow-xs: 0 4px 12px rgba(17, 37, 31, 0.035);
-  --app-shadow: 0 8px 22px rgba(17, 37, 31, 0.055);
-  --app-shadow-lg: 0 14px 34px rgba(17, 37, 31, 0.075);
-  --app-shadow-hover: 0 12px 26px rgba(17, 37, 31, 0.085);
-  --app-shadow-hero: 0 12px 26px rgba(17, 53, 43, 0.10);
+  --app-panel-soft: #f7fbf9;
+  --app-border: rgba(17, 82, 62, 0.11);
+  --app-border-strong: rgba(17, 82, 62, 0.18);
+  --app-shadow-xs: 0 4px 12px rgba(17, 37, 31, 0.03);
+  --app-shadow: 0 10px 24px rgba(17, 37, 31, 0.055);
+  --app-shadow-lg: 0 16px 34px rgba(17, 37, 31, 0.075);
+  --app-shadow-hover: 0 14px 30px rgba(17, 37, 31, 0.09);
+  --app-shadow-hero: 0 10px 24px rgba(17, 53, 43, 0.08);
 
   --app-primary: #178a62;
   --app-primary-dark: #0f6f50;
@@ -24,12 +29,12 @@
   --app-danger: #e75a4d;
   --app-danger-soft: #fdeceb;
 
-  --app-text: #17312a;
-  --app-text-secondary: #5c726c;
-  --app-text-tertiary: #7d918b;
+  --app-text: #1b322d;
+  --app-text-secondary: #4f6760;
+  --app-text-tertiary: #6f857f;
 
-  --app-menu-bg: linear-gradient(180deg, #113a34 0%, #10302d 60%, #0f2a2a 100%);
-  --app-header-bg: rgba(255, 255, 255, 0.86);
+  --app-menu-bg: linear-gradient(180deg, #1a4c41 0%, #175145 56%, #16473f 100%);
+  --app-header-bg: rgba(255, 255, 255, 0.92);
   --app-hero-gradient: linear-gradient(135deg, #17483f 0%, #166257 55%, #21786f 100%);
   --app-hero-gradient-cool: linear-gradient(135deg, #19374a 0%, #1d566e 55%, #17726c 100%);
   --app-hero-gradient-warn: linear-gradient(135deg, #5b3725 0%, #8d511d 56%, #cf7d18 100%);

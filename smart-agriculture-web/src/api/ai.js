@@ -39,3 +39,13 @@ export function getWarningQuickSummaryApi(mode = 'abnormal') {
     params: { mode }
   })
 }
+
+export function sendAiRagChatApi(data) {
+  return request({
+    url: '/ai/rag/chat',
+    method: 'post',
+    data,
+    // RAG：检索 + 大模型生成常超过全局 10s，单独放宽避免 axios 先超时
+    timeout: 120000
+  })
+}

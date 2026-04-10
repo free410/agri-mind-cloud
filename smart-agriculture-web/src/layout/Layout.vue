@@ -40,6 +40,8 @@ function toggleAside() {
 
 <style scoped lang="scss">
 .layout-shell {
+  position: relative;
+  z-index: 1;
   display: flex;
   height: 100vh;
   gap: var(--app-grid-gap);
@@ -54,8 +56,8 @@ function toggleAside() {
   position: relative;
   padding: 12px 10px;
   background: var(--app-menu-bg);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  box-shadow: 0 12px 30px rgba(12, 36, 29, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 10px 24px rgba(15, 52, 40, 0.16);
   overflow: visible;
   transition:
     width 0.24s ease,
@@ -132,30 +134,39 @@ function toggleAside() {
   flex-direction: column;
   gap: var(--app-card-content-gap);
   overflow: hidden;
+  border-radius: var(--app-radius);
 }
 
 .header-wrapper {
   width: 100%;
   max-width: none;
   margin: 0;
+  backdrop-filter: saturate(110%) blur(1.2px);
 }
 
 .layout-content {
   flex: 1;
   min-height: 0;
-  overflow-y: auto;
   overflow-x: hidden;
+  overflow-y: auto;
   padding-right: 2px;
+  display: flex;
+  flex-direction: column;
 }
 
 .content-wrapper {
   width: 100%;
   max-width: none;
-  min-height: 100%;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
   margin: 0;
   padding: var(--app-content-padding);
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 0.90);
+  border: 1px solid rgba(17, 82, 62, 0.08);
   box-shadow: var(--app-shadow);
+  backdrop-filter: blur(1.6px) saturate(108%);
 }
 
 @media (max-width: 1024px) {

@@ -1,7 +1,8 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
 import { clearAuth } from '@/utils/auth'
-import { getToken } from '@/utils/storage'
+import { getToken, getUserInfo } from '@/utils/storage'
+import { useAiAssistantStore } from '@/stores/aiAssistant'
 
 const service = axios.create({
   baseURL: import.meta.env.VITE_APP_BASE_API || 'http://localhost:8080/api',
@@ -31,7 +32,13 @@ service.interceptors.response.use(
   (error) => {
     const status = error.response?.status
     if (status === 401) {
+      const adminId = getUserInfo()?.id
       clearAuth()
+      try {
+        useAiAssistantStore().clearSession(adminId)
+      } catch {
+        /* Pinia 未就绪时忽略 */
+      }
       window.location.href = '/login'
     }
     ElMessage.error(error.response?.data?.message || error.message || '网络异常')

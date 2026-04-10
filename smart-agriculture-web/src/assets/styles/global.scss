@@ -11,15 +11,49 @@ body,
   min-height: 100%;
   margin: 0;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
-  background: var(--app-bg);
+  background: var(--app-bg-gradient);
   color: var(--app-text);
 }
 
 body {
+  position: relative;
+  background: var(--app-bg-gradient);
+}
+
+#app {
+  position: relative;
+  isolation: isolate;
+}
+
+#app::before,
+#app::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+#app::before {
+  z-index: -2;
   background:
-    radial-gradient(circle at top left, rgba(23, 138, 98, 0.06), transparent 24%),
-    radial-gradient(circle at top right, rgba(76, 139, 245, 0.04), transparent 18%),
-    linear-gradient(180deg, #f8fbfa 0%, #eef4f1 100%);
+    radial-gradient(circle at 10% 8%, var(--app-bg-glow-green), transparent 36%),
+    radial-gradient(circle at 90% 12%, var(--app-bg-glow-tech), transparent 30%),
+    radial-gradient(circle at 52% 92%, rgba(23, 138, 98, 0.06), transparent 34%);
+}
+
+#app::after {
+  z-index: -1;
+  opacity: 0.42;
+  background-image:
+    linear-gradient(to right, var(--app-bg-grid-line) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-bg-grid-line) 1px, transparent 1px),
+    linear-gradient(to right, var(--app-bg-grid-line-strong) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--app-bg-grid-line-strong) 1px, transparent 1px);
+  background-size:
+    28px 28px,
+    28px 28px,
+    112px 112px,
+    112px 112px;
 }
 
 ::selection {
@@ -48,8 +82,24 @@ a {
   text-decoration: none;
 }
 
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: var(--app-text);
+}
+
+p,
+small,
+label,
+span {
+  color: inherit;
+}
+
 .page-card {
-  background: var(--app-panel);
+  background: var(--app-panel-strong);
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius);
   box-shadow: var(--app-shadow);
@@ -101,13 +151,13 @@ a {
   min-height: var(--app-banner-min-height);
   padding: var(--app-banner-padding-y) var(--app-banner-padding-x);
   border-radius: var(--app-radius);
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid var(--app-border);
   background:
-    radial-gradient(circle at top right, rgba(76, 139, 245, 0.10), transparent 26%),
-    radial-gradient(circle at left bottom, rgba(23, 138, 98, 0.12), transparent 20%),
-    var(--app-hero-gradient);
+    radial-gradient(circle at top right, rgba(76, 139, 245, 0.10), transparent 34%),
+    radial-gradient(circle at left bottom, rgba(23, 138, 98, 0.12), transparent 28%),
+    linear-gradient(135deg, #f6fcf8 0%, #eff8f3 56%, #f7fbf9 100%);
   box-shadow: var(--app-shadow-hero);
-  color: #eefbf5;
+  color: var(--app-text);
 }
 
 .page-banner__main {
@@ -123,10 +173,11 @@ a {
   width: fit-content;
   padding: 6px 12px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.14);
-  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(23, 138, 98, 0.20);
+  background: rgba(23, 138, 98, 0.08);
   font-size: 12px;
   font-weight: 700;
+  color: var(--app-primary-dark);
 }
 
 .page-banner__title {
@@ -142,7 +193,7 @@ a {
   margin: 0;
   font-size: 12px;
   line-height: 1.55;
-  color: rgba(238, 251, 245, 0.80);
+  color: var(--app-text-secondary);
 }
 
 .page-banner__actions {
@@ -160,10 +211,11 @@ a {
   padding: 0 12px;
   height: 34px;
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.09);
+  border: 1px solid rgba(17, 82, 62, 0.10);
+  background: rgba(255, 255, 255, 0.88);
   font-size: 12px;
   font-weight: 600;
+  color: var(--app-text-secondary);
 }
 
 .page-overview-grid {
@@ -256,7 +308,7 @@ a {
 .page-grid-card {
   border: 1px solid var(--app-border);
   border-radius: var(--app-radius);
-  background: #ffffff;
+  background: var(--app-panel-strong);
   box-shadow: var(--app-shadow);
 }
 
@@ -272,6 +324,15 @@ a {
 .page-filter-card,
 .filter-card {
   background: linear-gradient(180deg, rgba(248, 251, 250, 0.98), rgba(255, 255, 255, 1));
+}
+
+.content-wrapper,
+.page-filter-card,
+.page-content-card,
+.page-grid-card,
+.page-table-shell,
+.el-card {
+  backdrop-filter: saturate(110%) blur(1.5px);
 }
 
 .page-filter-card :deep(.el-form-item:last-child) {
@@ -639,6 +700,78 @@ a {
   color: var(--app-text);
 }
 
+.el-form-item__content {
+  color: var(--app-text-secondary);
+}
+
+.el-input__inner,
+.el-textarea__inner,
+.el-select__input {
+  color: var(--app-text);
+}
+
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder,
+.el-select__placeholder,
+.el-date-editor .el-range-input::placeholder,
+.el-date-editor .el-input__inner::placeholder {
+  color: var(--app-text-tertiary) !important;
+  opacity: 1;
+}
+
+.el-input.is-disabled .el-input__inner,
+.el-textarea.is-disabled .el-textarea__inner,
+.el-select.is-disabled .el-select__placeholder {
+  color: #6f857f !important;
+  -webkit-text-fill-color: #6f857f;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-textarea__inner,
+.el-date-editor .el-input__wrapper {
+  --el-input-text-color: var(--app-text);
+  --el-text-color-placeholder: var(--app-text-tertiary);
+}
+
+/* 强制修复白底输入控件中“白字/浅字不可读”问题 */
+.el-input__wrapper .el-input__inner,
+.el-input__inner,
+.el-select .el-select__selected-item,
+.el-select .el-select__input,
+.el-select .el-select__placeholder,
+.el-date-editor .el-range-input,
+.el-date-editor .el-input__inner,
+.el-textarea__inner {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111;
+}
+
+.el-select .el-select__placeholder,
+.el-select .el-select__placeholder.is-transparent,
+.el-select .el-select__placeholder span,
+.el-input__inner::placeholder,
+.el-textarea__inner::placeholder,
+.el-date-editor .el-range-input::placeholder,
+.el-date-editor .el-input__inner::placeholder {
+  color: #111111 !important;
+  -webkit-text-fill-color: #111111;
+  opacity: 1 !important;
+}
+
+.page-filter-card .el-input__wrapper,
+.page-filter-card .el-select__wrapper,
+.page-filter-card .el-date-editor .el-input__wrapper {
+  background: #ffffff !important;
+}
+
+.el-input__wrapper,
+.el-select__wrapper,
+.el-date-editor .el-input__wrapper {
+  --el-input-text-color: #111111 !important;
+  --el-text-color-placeholder: #111111 !important;
+}
+
 .el-tag {
   border-radius: 999px;
   padding: 0 10px;
@@ -690,6 +823,11 @@ a {
 
 .el-table td.el-table__cell {
   padding: 13px 0;
+  color: var(--app-text);
+}
+
+.el-table .cell {
+  color: inherit;
 }
 
 .el-pagination {

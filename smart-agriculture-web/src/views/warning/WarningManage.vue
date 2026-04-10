@@ -96,6 +96,21 @@
             </div>
           </template>
 
+          <div class="warning-list-summary">
+            <div class="warning-list-summary__item">
+              <span>总预警数</span>
+              <strong>{{ overviewStats.total }}</strong>
+            </div>
+            <div class="warning-list-summary__item">
+              <span>待处理</span>
+              <strong>{{ overviewStats.pending }}</strong>
+            </div>
+            <div class="warning-list-summary__item">
+              <span>高风险</span>
+              <strong>{{ overviewStats.highRisk }}</strong>
+            </div>
+          </div>
+
           <div class="page-table-shell">
             <el-table
               v-loading="listLoading"
@@ -146,6 +161,62 @@
             />
           </div>
         </el-card>
+
+        <el-card class="page-content-card warning-distribution-card" shadow="never">
+          <template #header>
+            <div class="page-panel-title">
+              <strong>预警分布概览</strong>
+              <span class="page-panel-tip">用于补齐左侧工作区高度，并展示当前范围预警结构。</span>
+            </div>
+          </template>
+          <div class="warning-distribution-grid">
+            <article class="distribution-panel">
+              <div class="distribution-panel__head">
+                <strong>等级分布</strong>
+                <span>{{ levelDistributionTotal }} 条</span>
+              </div>
+              <div class="distribution-list">
+                <div
+                  v-for="item in levelDistributionList"
+                  :key="item.key"
+                  class="distribution-item"
+                >
+                  <div class="distribution-item__meta">
+                    <em>{{ item.label }}</em>
+                    <strong>{{ item.value }} 条</strong>
+                  </div>
+                  <div class="distribution-track">
+                    <span class="distribution-track__bar" :class="item.tone" :style="{ width: `${item.percent}%` }"></span>
+                  </div>
+                  <span class="distribution-item__percent">{{ item.percentText }}</span>
+                </div>
+              </div>
+            </article>
+
+            <article class="distribution-panel">
+              <div class="distribution-panel__head">
+                <strong>状态分布</strong>
+                <span>{{ statusDistributionTotal }} 条</span>
+              </div>
+              <div class="distribution-list">
+                <div
+                  v-for="item in statusDistributionList"
+                  :key="item.key"
+                  class="distribution-item"
+                >
+                  <div class="distribution-item__meta">
+                    <em>{{ item.label }}</em>
+                    <strong>{{ item.value }} 条</strong>
+                  </div>
+                  <div class="distribution-track">
+                    <span class="distribution-track__bar" :class="item.tone" :style="{ width: `${item.percent}%` }"></span>
+                  </div>
+                  <span class="distribution-item__percent">{{ item.percentText }}</span>
+                </div>
+              </div>
+            </article>
+          </div>
+        </el-card>
       </div>
 
       <div class="warning-layout__right">
@@ -163,10 +234,11 @@
 
           <div v-else v-loading="detailLoading" class="warning-workbench">
             <section class="workbench-section">
-              <div class="workbench-section__head">
-                <strong>基本信息</strong>
-              </div>
-              <div class="report-toolbar">
+              <div class="workbench-section__head workbench-section__head--with-action">
+                <div class="workbench-section-title">
+                  <strong>预警概览</strong>
+                  <span>结构化展示当前事件与触发快照。</span>
+                </div>
                 <el-button
                   type="primary"
                   plain
@@ -177,124 +249,131 @@
                   生成处置报告
                 </el-button>
               </div>
-              <div class="basic-grid">
-                <div class="basic-item">
+              <div class="overview-info-grid">
+                <div class="overview-info-item">
                   <span>预警类型</span>
                   <strong>{{ detailData.warningTypeName || '--' }}</strong>
                 </div>
-                <div class="basic-item">
+                <div class="overview-info-item">
                   <span>风险等级</span>
                   <strong>{{ detailData.levelName || '--' }}</strong>
                 </div>
-                <div class="basic-item">
+                <div class="overview-info-item">
                   <span>当前状态</span>
                   <strong>{{ detailData.statusName || '--' }}</strong>
                 </div>
-                <div class="basic-item">
-                  <span>触发时间</span>
-                  <strong>{{ detailData.triggerTime || '--' }}</strong>
-                </div>
-                <div class="basic-item">
+                <div class="overview-info-item">
                   <span>所属农田</span>
                   <strong>{{ detailData.farmlandName || '--' }}</strong>
                 </div>
-                <div class="basic-item">
+                <div class="overview-info-item">
                   <span>关联设备</span>
                   <strong>{{ detailData.relatedDeviceName || '--' }}</strong>
                 </div>
+                <div class="overview-info-item">
+                  <span>触发时间</span>
+                  <strong>{{ detailData.triggerTime || '--' }}</strong>
+                </div>
               </div>
-              <div class="content-block">
-                <span>预警内容</span>
+              <div class="overview-summary-block">
+                <span>预警摘要</span>
                 <p>{{ detailData.content || '--' }}</p>
               </div>
-            </section>
-
-            <section class="workbench-section snapshot-section">
-              <div class="workbench-section__head">
-                <strong>环境 / 设备快照</strong>
-              </div>
-              <div class="snapshot-grid">
-                <div class="snapshot-card">
+              <div class="overview-snapshot-grid">
+                <div class="overview-snapshot-item">
                   <span>触发来源</span>
                   <strong>{{ detailData.triggerSourceName || '--' }}</strong>
                 </div>
-                <div class="snapshot-card">
+                <div class="overview-snapshot-item">
                   <span>处理人</span>
                   <strong>{{ detailData.handlerName || '未分配' }}</strong>
                 </div>
-                <div class="snapshot-card">
+                <div class="overview-snapshot-item">
                   <span>处理时间</span>
                   <strong>{{ detailData.handleTime || '--' }}</strong>
                 </div>
-                <div class="snapshot-card">
+                <div class="overview-snapshot-item">
                   <span>闭环时间</span>
                   <strong>{{ detailData.closeTime || '--' }}</strong>
                 </div>
               </div>
             </section>
 
-            <section class="workbench-section ai-section-grid">
-              <el-card class="inner-card ai-analysis-card" shadow="never">
-                <template #header>
-                  <div class="inner-card-head">
+            <section class="workbench-section">
+              <div class="workbench-section__head">
+                <div class="workbench-section-title">
+                  <strong>AI 分析与处置建议</strong>
+                  <span>并排呈现原因研判与执行建议，便于快速决策。</span>
+                </div>
+              </div>
+              <div class="ai-workbench-grid">
+                <article class="ai-pane">
+                  <div class="ai-pane__head">
                     <strong>AI 原因分析</strong>
                     <el-button text type="primary" @click="refreshAiAnalysis">刷新分析</el-button>
                   </div>
-                </template>
-                <div v-loading="analysisLoading">
-                  <p class="ai-overview">{{ aiAnalysis.warningOverview || '暂无分析结果' }}</p>
-                  <div class="ai-block">
-                    <span>可能原因</span>
-                    <ul>
-                      <li v-for="item in aiAnalysis.possibleCauses" :key="item">{{ item }}</li>
-                    </ul>
+                  <div v-loading="analysisLoading">
+                    <p class="ai-overview">{{ aiAnalysis.warningOverview || '暂无分析结果' }}</p>
+                    <div class="ai-block">
+                      <span>可能原因</span>
+                      <ul>
+                        <li v-for="item in aiAnalysis.possibleCauses" :key="item">{{ item }}</li>
+                      </ul>
+                    </div>
+                    <div class="ai-block">
+                      <span>风险影响</span>
+                      <p>{{ aiAnalysis.riskImpact || '--' }}</p>
+                    </div>
+                    <div class="ai-block" v-if="aiAnalysis.recommendations?.length">
+                      <span>补充建议</span>
+                      <ul>
+                        <li v-for="item in aiAnalysis.recommendations" :key="item">{{ item }}</li>
+                      </ul>
+                    </div>
+                    <div class="ai-meta-row">
+                      <el-tag type="warning" effect="plain">优先级：{{ aiPriorityLabel(aiAnalysis.priorityLevel) }}</el-tag>
+                      <el-tag :type="aiAnalysis.manualReviewRequired ? 'danger' : 'success'" effect="plain">
+                        {{ aiAnalysis.manualReviewRequired ? '建议人工复核' : '可按流程自动处理' }}
+                      </el-tag>
+                    </div>
                   </div>
-                  <div class="ai-block">
-                    <span>风险影响</span>
-                    <p>{{ aiAnalysis.riskImpact || '--' }}</p>
-                  </div>
-                  <div class="ai-meta-row">
-                    <el-tag type="warning" effect="plain">优先级：{{ aiPriorityLabel(aiAnalysis.priorityLevel) }}</el-tag>
-                    <el-tag :type="aiAnalysis.manualReviewRequired ? 'danger' : 'success'" effect="plain">
-                      {{ aiAnalysis.manualReviewRequired ? '建议人工复核' : '可按流程自动处理' }}
-                    </el-tag>
-                  </div>
-                </div>
-              </el-card>
+                </article>
 
-              <el-card class="inner-card ai-disposal-card" shadow="never">
-                <template #header>
-                  <div class="inner-card-head">
+                <article class="ai-pane">
+                  <div class="ai-pane__head">
                     <strong>AI 处置建议</strong>
                     <el-button text type="primary" @click="refreshAiDisposal">刷新建议</el-button>
                   </div>
-                </template>
-                <div v-loading="disposalLoading">
-                  <div class="ai-block">
-                    <span>推荐步骤</span>
-                    <ol class="ordered-list">
-                      <li v-for="step in aiDisposal.steps" :key="step">{{ step }}</li>
-                    </ol>
+                  <div v-loading="disposalLoading">
+                    <div class="ai-block">
+                      <span>推荐步骤</span>
+                      <ol class="ordered-list">
+                        <li v-for="step in aiDisposal.steps" :key="step">{{ step }}</li>
+                      </ol>
+                    </div>
+                    <div class="ai-block">
+                      <span>检查对象</span>
+                      <ul>
+                        <li v-for="target in aiDisposal.checkTargets" :key="target">{{ target }}</li>
+                      </ul>
+                    </div>
+                    <div class="ai-meta-row">
+                      <el-tag :type="aiDisposal.needDeviceInspection ? 'warning' : 'info'" effect="plain">
+                        {{ aiDisposal.needDeviceInspection ? '建议联动设备巡检' : '当前无需额外巡检' }}
+                      </el-tag>
+                    </div>
+                    <p class="ai-summary">{{ aiDisposal.summary || '--' }}</p>
                   </div>
-                  <div class="ai-block">
-                    <span>检查对象</span>
-                    <ul>
-                      <li v-for="target in aiDisposal.checkTargets" :key="target">{{ target }}</li>
-                    </ul>
-                  </div>
-                  <div class="ai-meta-row">
-                    <el-tag :type="aiDisposal.needDeviceInspection ? 'warning' : 'info'" effect="plain">
-                      {{ aiDisposal.needDeviceInspection ? '建议联动设备巡检' : '当前无需额外巡检' }}
-                    </el-tag>
-                  </div>
-                  <p class="ai-summary">{{ aiDisposal.summary || '--' }}</p>
-                </div>
-              </el-card>
+                </article>
+              </div>
             </section>
 
             <section class="workbench-section">
               <div class="workbench-section__head">
-                <strong>状态流转操作区</strong>
+                <div class="workbench-section-title">
+                  <strong>状态流转操作区</strong>
+                  <span>按流程完成确认、处理中、结果提交与闭环动作。</span>
+                </div>
               </div>
               <el-form :model="actionForm" label-width="88px" class="action-form">
                 <el-form-item label="操作人">
@@ -359,9 +438,12 @@
 
             <section class="workbench-section">
               <div class="workbench-section__head">
-                <strong>处理记录时间线</strong>
+                <div class="workbench-section-title">
+                  <strong>处理记录时间线</strong>
+                  <span>按时间查看关键操作、状态变化与说明。</span>
+                </div>
               </div>
-              <el-timeline class="warning-timeline">
+              <el-timeline v-if="flowLogs.length" class="warning-timeline">
                 <el-timeline-item
                   v-for="log in flowLogs"
                   :key="log.id"
@@ -381,6 +463,7 @@
                   </div>
                 </el-timeline-item>
               </el-timeline>
+              <el-empty v-else description="暂无处理记录" :image-size="56" />
             </section>
           </div>
         </el-card>
@@ -525,6 +608,16 @@ const overviewStats = reactive({
   closed: 0
 })
 
+const distributionStats = reactive({
+  levelLow: 0,
+  levelMedium: 0,
+  levelHigh: 0,
+  statusPending: 0,
+  statusProcessing: 0,
+  statusHandled: 0,
+  statusClosed: 0
+})
+
 const detailData = reactive({
   id: undefined,
   warningNo: '',
@@ -592,6 +685,86 @@ const closureRate = computed(() => {
   return `${((overviewStats.closed / overviewStats.total) * 100).toFixed(1)}%`
 })
 
+const levelDistributionTotal = computed(
+  () => distributionStats.levelLow + distributionStats.levelMedium + distributionStats.levelHigh
+)
+
+const statusDistributionTotal = computed(
+  () =>
+    distributionStats.statusPending +
+    distributionStats.statusProcessing +
+    distributionStats.statusHandled +
+    distributionStats.statusClosed
+)
+
+const levelDistributionList = computed(() => {
+  const total = levelDistributionTotal.value
+  return [
+    {
+      key: 'level-low',
+      label: '低风险',
+      value: distributionStats.levelLow,
+      tone: 'tone-success',
+      percent: calcPercent(distributionStats.levelLow, total),
+      percentText: formatPercent(calcPercent(distributionStats.levelLow, total))
+    },
+    {
+      key: 'level-medium',
+      label: '中风险',
+      value: distributionStats.levelMedium,
+      tone: 'tone-warning',
+      percent: calcPercent(distributionStats.levelMedium, total),
+      percentText: formatPercent(calcPercent(distributionStats.levelMedium, total))
+    },
+    {
+      key: 'level-high',
+      label: '高风险',
+      value: distributionStats.levelHigh,
+      tone: 'tone-danger',
+      percent: calcPercent(distributionStats.levelHigh, total),
+      percentText: formatPercent(calcPercent(distributionStats.levelHigh, total))
+    }
+  ]
+})
+
+const statusDistributionList = computed(() => {
+  const total = statusDistributionTotal.value
+  return [
+    {
+      key: 'status-pending',
+      label: '待确认',
+      value: distributionStats.statusPending,
+      tone: 'tone-primary',
+      percent: calcPercent(distributionStats.statusPending, total),
+      percentText: formatPercent(calcPercent(distributionStats.statusPending, total))
+    },
+    {
+      key: 'status-processing',
+      label: '处理中',
+      value: distributionStats.statusProcessing,
+      tone: 'tone-warning',
+      percent: calcPercent(distributionStats.statusProcessing, total),
+      percentText: formatPercent(calcPercent(distributionStats.statusProcessing, total))
+    },
+    {
+      key: 'status-handled',
+      label: '已处理',
+      tone: 'tone-success',
+      value: distributionStats.statusHandled,
+      percent: calcPercent(distributionStats.statusHandled, total),
+      percentText: formatPercent(calcPercent(distributionStats.statusHandled, total))
+    },
+    {
+      key: 'status-closed',
+      label: '已闭环',
+      value: distributionStats.statusClosed,
+      tone: 'tone-closed',
+      percent: calcPercent(distributionStats.statusClosed, total),
+      percentText: formatPercent(calcPercent(distributionStats.statusClosed, total))
+    }
+  ]
+})
+
 const allowFalseAlarm = computed(
   () => [0, 1, 2].includes(detailData.status) && detailData.id && !isTrue(detailData.isFalseAlarm)
 )
@@ -613,23 +786,46 @@ async function fetchFarmlandOptions() {
 
 async function fetchOverviewStats() {
   try {
-    const [totalRes, highRes, confirmRes, processingRes, closedRes] = await Promise.all([
-      getWarningPageApi({ current: 1, size: 1 }),
-      getWarningPageApi({ current: 1, size: 1, level: 3 }),
-      getWarningPageApi({ current: 1, size: 1, status: 0 }),
-      getWarningPageApi({ current: 1, size: 1, status: 1 }),
-      getWarningPageApi({ current: 1, size: 1, status: 3 })
+    const scopeParams = queryForm.farmlandId ? { farmlandId: queryForm.farmlandId } : {}
+    const [totalRes, highRes, confirmRes, processingRes, closedRes, levelLowRes, levelMediumRes, levelHighRes, statusPendingRes, statusProcessingRes, statusHandledRes, statusClosedRes] = await Promise.all([
+      getWarningPageApi({ current: 1, size: 1, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, level: 3, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 0, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 1, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 3, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, level: 1, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, level: 2, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, level: 3, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 0, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 1, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 2, ...scopeParams }),
+      getWarningPageApi({ current: 1, size: 1, status: 3, ...scopeParams })
     ])
 
     overviewStats.total = totalRes.total || 0
     overviewStats.highRisk = highRes.total || 0
     overviewStats.pending = (confirmRes.total || 0) + (processingRes.total || 0)
     overviewStats.closed = closedRes.total || 0
+
+    distributionStats.levelLow = levelLowRes.total || 0
+    distributionStats.levelMedium = levelMediumRes.total || 0
+    distributionStats.levelHigh = levelHighRes.total || 0
+    distributionStats.statusPending = statusPendingRes.total || 0
+    distributionStats.statusProcessing = statusProcessingRes.total || 0
+    distributionStats.statusHandled = statusHandledRes.total || 0
+    distributionStats.statusClosed = statusClosedRes.total || 0
   } catch (error) {
     overviewStats.total = 0
     overviewStats.highRisk = 0
     overviewStats.pending = 0
     overviewStats.closed = 0
+    distributionStats.levelLow = 0
+    distributionStats.levelMedium = 0
+    distributionStats.levelHigh = 0
+    distributionStats.statusPending = 0
+    distributionStats.statusProcessing = 0
+    distributionStats.statusHandled = 0
+    distributionStats.statusClosed = 0
     ElMessage.warning('预警概览统计加载失败')
   }
 }
@@ -670,7 +866,7 @@ async function fetchWarningTable() {
 
 function handleSearch() {
   pagination.current = 1
-  fetchWarningTable()
+  Promise.all([fetchWarningTable(), fetchOverviewStats()])
 }
 
 function handleReset() {
@@ -678,7 +874,7 @@ function handleReset() {
   queryForm.status = undefined
   queryForm.farmlandId = undefined
   pagination.current = 1
-  fetchWarningTable()
+  Promise.all([fetchWarningTable(), fetchOverviewStats()])
 }
 
 async function handleSelectWarning(row) {
@@ -933,6 +1129,15 @@ async function runFlowAction(apiCall, successMessage) {
   }
 }
 
+function calcPercent(value, total) {
+  if (!total) return 0
+  return Number(((value / total) * 100).toFixed(1))
+}
+
+function formatPercent(value) {
+  return `${Number(value || 0).toFixed(1)}%`
+}
+
 function aiPriorityLabel(level) {
   return level === 3 ? '高' : level === 1 ? '低' : '中'
 }
@@ -1024,38 +1229,215 @@ function resetReportState() {
 
 .warning-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.28fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 44fr) minmax(0, 56fr);
   gap: 16px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .warning-layout__left,
 .warning-layout__right {
   display: grid;
   gap: 16px;
+  min-height: 100%;
+}
+
+.warning-layout__left {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+.warning-layout__right {
+  grid-template-rows: minmax(0, 1fr);
+}
+
+.warning-list-card {
+  min-height: 560px;
+}
+
+.warning-list-card :deep(.el-card__body) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.warning-list-card .page-table-shell {
+  flex: 1;
+  min-height: 390px;
+}
+
+.warning-list-card :deep(.el-table) {
+  height: 100%;
+}
+
+.warning-filter-form {
+  row-gap: 8px;
+
+  :deep(.el-form-item) {
+    margin-bottom: 8px;
+  }
+}
+
+.warning-list-summary {
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.warning-list-summary__item {
+  padding: 9px 12px;
+  border: 1px solid rgba(15, 73, 54, 0.1);
+  border-radius: 10px;
+  background: #fbfefd;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+
+  span {
+    font-size: 12px;
+    color: var(--app-text-secondary);
+  }
+
+  strong {
+    font-size: 18px;
+    line-height: 1;
+    color: var(--app-text);
+  }
+}
+
+.warning-distribution-card {
+  min-height: 240px;
+}
+
+.warning-distribution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.distribution-panel {
+  border: 1px solid rgba(15, 73, 54, 0.08);
+  border-radius: 12px;
+  background: #fcfefd;
+  padding: 10px 11px;
+}
+
+.distribution-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+
+  strong {
+    font-size: 13px;
+    color: var(--app-text);
+  }
+
+  span {
+    font-size: 12px;
+    color: var(--app-text-secondary);
+  }
+}
+
+.distribution-list {
+  display: grid;
+  gap: 8px;
+}
+
+.distribution-item {
+  border: 1px solid rgba(15, 73, 54, 0.08);
+  border-radius: 10px;
+  background: #fff;
+  padding: 8px 9px;
+  display: grid;
+  gap: 6px;
+}
+
+.distribution-item__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+
+  em {
+    font-style: normal;
+    font-size: 12px;
+    color: var(--app-text-secondary);
+  }
+
+  strong {
+    font-size: 13px;
+    color: var(--app-text);
+  }
+}
+
+.distribution-track {
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(15, 73, 54, 0.08);
+  overflow: hidden;
+}
+
+.distribution-track__bar {
+  display: block;
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+}
+
+.distribution-item__percent {
+  display: block;
+  font-size: 12px;
+  color: var(--app-text-secondary);
+  text-align: right;
+}
+
+.distribution-track__bar.tone-success {
+  background: #16a34a;
+}
+
+.distribution-track__bar.tone-warning {
+  background: #f59e0b;
+}
+
+.distribution-track__bar.tone-danger {
+  background: #ef4444;
+}
+
+.distribution-track__bar.tone-primary {
+  background: #3b82f6;
+}
+
+.distribution-track__bar.tone-closed {
+  background: #22c55e;
 }
 
 .warning-center-table :deep(.el-table__row) {
   cursor: pointer;
 }
 
+.warning-center-table :deep(.el-table__row.current-row > td.el-table__cell) {
+  background: rgba(31, 143, 95, 0.08) !important;
+}
+
 .warning-workbench-card :deep(.el-card__body) {
-  padding-top: 8px;
+  padding-top: 10px;
+  min-height: 100%;
 }
 
 .warning-workbench {
   display: grid;
-  gap: 14px;
+  gap: 16px;
 }
 
 .workbench-section {
   border: 1px solid rgba(15, 73, 54, 0.08);
   border-radius: 16px;
-  background: #fff;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(249, 252, 251, 0.98));
 }
 
 .workbench-section__head {
-  padding: 12px 14px;
+  padding: 12px 14px 11px;
   border-bottom: 1px solid rgba(15, 73, 54, 0.08);
 
   strong {
@@ -1064,24 +1446,36 @@ function resetReportState() {
   }
 }
 
-.report-toolbar {
-  padding: 10px 12px 0;
+.workbench-section__head--with-action {
   display: flex;
-  justify-content: flex-end;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.basic-grid {
+.workbench-section-title {
+  display: grid;
+  gap: 2px;
+
+  span {
+    font-size: 12px;
+    line-height: 1.45;
+    color: var(--app-text-secondary);
+  }
+}
+
+.overview-info-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
-  padding: 12px;
+  padding: 12px 12px 8px;
 }
 
-.basic-item {
+.overview-info-item {
   padding: 10px 12px;
   border: 1px solid rgba(15, 73, 54, 0.08);
   border-radius: 12px;
-  background: #fefefe;
+  background: #ffffff;
 
   span {
     display: block;
@@ -1094,14 +1488,16 @@ function resetReportState() {
     margin-top: 5px;
     font-size: 16px;
     color: var(--app-text);
+    line-height: 1.4;
   }
 }
 
-.content-block {
-  margin: 0 12px 12px;
+.overview-summary-block {
+  margin: 0 12px;
   padding: 10px 12px;
   border: 1px dashed rgba(15, 73, 54, 0.16);
   border-radius: 12px;
+  background: rgba(255, 255, 255, 0.9);
 
   span {
     display: block;
@@ -1116,18 +1512,18 @@ function resetReportState() {
   }
 }
 
-.snapshot-grid {
+.overview-snapshot-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  padding: 12px;
+  padding: 10px 12px 12px;
 }
 
-.snapshot-card {
-  padding: 10px 12px;
+.overview-snapshot-item {
+  padding: 9px 11px;
   border: 1px solid rgba(15, 73, 54, 0.08);
   border-radius: 12px;
-  background: #f9fbfa;
+  background: #f9fcfb;
 
   span {
     display: block;
@@ -1138,32 +1534,43 @@ function resetReportState() {
   strong {
     display: block;
     margin-top: 6px;
-    font-size: 15px;
+    font-size: 14px;
     color: var(--app-text);
   }
 }
 
-.ai-section-grid {
+.ai-workbench-grid {
+  padding: 12px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 12px;
-  border: none;
-  background: transparent;
 }
 
-.inner-card {
-  border-radius: 16px;
+.ai-pane {
+  border: 1px solid rgba(15, 73, 54, 0.08);
+  border-radius: 14px;
+  background: #fff;
+  padding: 10px 11px;
+  display: grid;
+  gap: 10px;
 }
 
-.inner-card-head {
+.ai-pane__head {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end;
+  gap: 8px;
+
+  strong {
+    margin-right: auto;
+    font-size: 14px;
+    color: var(--app-text);
+  }
 }
 
 .ai-overview {
-  margin: 0 0 10px;
-  line-height: 1.7;
+  margin: 0;
+  line-height: 1.65;
   color: var(--app-text);
 }
 
@@ -1211,24 +1618,28 @@ function resetReportState() {
 }
 
 .action-form {
-  padding: 12px 12px 2px;
+  padding: 12px 12px 4px;
+
+  :deep(.el-form-item:last-child) {
+    margin-bottom: 8px;
+  }
 }
 
 .flow-actions {
   padding: 0 12px 12px;
   display: flex;
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .warning-timeline {
-  padding: 12px 14px 4px;
+  padding: 12px 14px 12px;
 }
 
 .timeline-card {
   border: 1px solid rgba(15, 73, 54, 0.08);
   border-radius: 12px;
-  padding: 10px 12px;
+  padding: 10px 12px 9px;
   background: #fff;
 
   p {
@@ -1251,10 +1662,12 @@ function resetReportState() {
 }
 
 .empty-hint {
-  min-height: 460px;
+  min-height: 520px;
   display: grid;
   place-items: center;
   color: var(--app-text-secondary);
+  text-align: center;
+  padding: 0 24px;
 }
 
 .report-view {
@@ -1360,7 +1773,20 @@ function resetReportState() {
     grid-template-columns: 1fr;
   }
 
-  .snapshot-grid {
+  .warning-layout__left {
+    grid-template-rows: auto auto auto;
+  }
+
+  .warning-list-card {
+    min-height: 0;
+  }
+
+  .warning-list-card .page-table-shell {
+    min-height: 320px;
+  }
+
+  .warning-distribution-grid,
+  .overview-snapshot-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -1370,8 +1796,14 @@ function resetReportState() {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .basic-grid,
-  .ai-section-grid {
+  .warning-list-summary,
+  .overview-info-grid,
+  .ai-workbench-grid,
+  .warning-distribution-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .overview-snapshot-grid {
     grid-template-columns: 1fr;
   }
 

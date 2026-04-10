@@ -2,6 +2,7 @@ import { defineStore } from 'pinia'
 import { loginApi, getCurrentUserApi, logoutApi } from '@/api/auth'
 import { clearAuth, saveAuth } from '@/utils/auth'
 import { getToken, getUserInfo } from '@/utils/storage'
+import { useAiAssistantStore } from '@/stores/aiAssistant'
 
 export const useUserStore = defineStore('user', {
   state: () => ({
@@ -20,6 +21,7 @@ export const useUserStore = defineStore('user', {
         username: data.username
       }
       saveAuth(this.token, this.userInfo)
+      useAiAssistantStore().rehydrateFromStorage()
       return data
     },
     async fetchCurrentUser() {
@@ -36,9 +38,11 @@ export const useUserStore = defineStore('user', {
       }
     },
     resetAuth() {
+      const adminId = this.userInfo?.id
       this.token = ''
       this.userInfo = null
       clearAuth()
+      useAiAssistantStore().clearSession(adminId)
     }
   }
 })

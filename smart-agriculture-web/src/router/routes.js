@@ -48,6 +48,12 @@ export const adminRoutes = [
     meta: { title: 'AI 助手', icon: 'ChatDotRound' }
   },
   {
+    path: '/knowledge-graph',
+    name: 'KnowledgeGraph',
+    component: () => import('@/views/knowledge/KnowledgeGraphExplorer.vue'),
+    meta: { title: '知识图谱', icon: 'Share' }
+  },
+  {
     path: '/profile',
     name: 'Profile',
     component: () => import('@/views/profile/Profile.vue'),
