@@ -1,0 +1,137 @@
+sources:
+  - source_name: "中国农业农村信息网"
+    base_url: "https://www.agri.cn"
+    allowed_domains:
+      - "www.agri.cn"
+      - "agri.cn"
+    list_pages:
+      - "https://www.agri.cn/"
+      - "https://www.agri.cn/zx/"
+    list_page_patterns:
+      - "^https://www\\.agri\\.cn/.+/t\\d{8}_\\d+\\.htm$"
+    article_selector_rules:
+      title_selectors:
+        - "h1"
+        - ".title"
+        - "title"
+      content_selectors:
+        - ".TRS_Editor"
+        - ".article-content"
+        - ".content"
+        - ".main-content"
+        - "article"
+      publish_time_selectors:
+        - ".info"
+        - ".source"
+        - ".time"
+        - ".article-info"
+      remove_selectors:
+        - "script"
+        - "style"
+        - "noscript"
+        - ".share"
+        - ".footer"
+        - ".breadcrumb"
+        - ".nav"
+        - ".pagination"
+        - ".related"
+        - ".editor"
+    topic_tags:
+      - "农业知识"
+      - "种植管理"
+      - "防灾减灾"
+    source_type: "crop_guide"
+    topic: "crop"
+    required_keywords: []
+    enabled: true
+    min_content_length: 260
+    notes: "公开农业资讯与技术知识来源，适合作为比赛知识库首批种子来源。"
+
+  - source_name: "中国政府网农业政策"
+    base_url: "https://www.gov.cn"
+    allowed_domains:
+      - "www.gov.cn"
+      - "gov.cn"
+    list_pages:
+      - "https://www.gov.cn/zhengce/index.htm"
+      - "https://www.gov.cn/zhengce/zuixin.htm"
+    list_page_patterns:
+      - "^https://www\\.gov\\.cn/.+\\.htm$"
+    article_selector_rules:
+      title_selectors:
+        - "h1"
+        - ".pages-title"
+        - "title"
+      content_selectors:
+        - ".pages_content"
+        - ".content"
+        - ".UCAP-CONTENT"
+        - "article"
+      publish_time_selectors:
+        - ".pages-date"
+        - ".pages-date span"
+        - ".source"
+        - ".time"
+      remove_selectors:
+        - "script"
+        - "style"
+        - "noscript"
+        - ".share"
+        - ".footer"
+        - ".breadcrumb"
+        - ".nav"
+        - ".pagination"
+        - ".related"
+        - ".editor"
+    topic_tags:
+      - "农业政策"
+      - "防灾减灾"
+      - "农业农村"
+    source_type: "policy"
+    topic: "warning"
+    required_keywords:
+      - "农业"
+      - "农村"
+      - "种植"
+      - "病虫害"
+      - "农机"
+      - "粮食"
+      - "渔业"
+      - "畜牧"
+    enabled: true
+    min_content_length: 260
+    notes: "抓取中国政府网公开农业农村相关政策和技术要求页面。"
+
+  - source_name: "农业农村部公开页面"
+    base_url: "https://www.moa.gov.cn"
+    allowed_domains:
+      - "www.moa.gov.cn"
+      - "moa.gov.cn"
+    list_pages:
+      - "https://www.moa.gov.cn/"
+    list_page_patterns:
+      - "^https://www\\.moa\\.gov\\.cn/.+\\.htm$"
+    article_selector_rules:
+      title_selectors:
+        - "h1"
+        - ".title"
+        - "title"
+      content_selectors:
+        - ".TRS_Editor"
+        - ".content"
+        - "article"
+      publish_time_selectors:
+        - ".info"
+        - ".time"
+      remove_selectors:
+        - "script"
+        - "style"
+        - "noscript"
+    topic_tags:
+      - "官方公开页面"
+    source_type: "policy"
+    topic: "warning"
+    required_keywords: []
+    enabled: false
+    min_content_length: 260
+    notes: "当前 robots.txt 为 Disallow:/，默认关闭，仅保留来源配置用于说明。"
