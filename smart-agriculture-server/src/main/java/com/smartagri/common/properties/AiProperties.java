@@ -10,28 +10,27 @@ public class AiProperties {
     /**
      * AI 提供方，可选值：mock、openai-compatible。
      */
-    private String provider = "mock";
+    private String provider = "openai-compatible";
 
     /**
-     * 是否启用 mock 模式。
-     * 该字段用于兼容旧配置，实际优先以 provider 为准。
+     * 是否启用 mock 模式（仅当 provider 未显式指定时参与路由）。
      */
-    private boolean mockEnabled = true;
+    private boolean mockEnabled = false;
 
     /**
-     * 模型名称。
+     * 模型名称（百炼示例：qwen-plus、qwen-turbo）。
      */
-    private String modelName = "mock-smart-agri-v1";
+    private String modelName = "qwen3.5-flash";
 
     /**
      * 真实模型调用失败时，是否自动回退到 mock 结果。
      */
-    private boolean fallbackToMock = true;
+    private boolean fallbackToMock = false;
 
     /**
-     * OpenAI 兼容接口基地址，例如 https://api.openai.com/v1
+     * OpenAI 兼容接口基地址；百炼为 https://dashscope.aliyuncs.com/compatible-mode/v1
      */
-    private String baseUrl = "https://api.openai.com/v1";
+    private String baseUrl = "https://dashscope.aliyuncs.com/compatible-mode/v1";
 
     /**
      * API Key。

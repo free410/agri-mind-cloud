@@ -13,8 +13,9 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/smart_agriculture?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
-    username: root
-    password: 1234
+    username: ${MYSQL_USERNAME:root}
+    # 勿在仓库中写真实密码；本地用环境变量 MYSQL_PASSWORD 或 application-local.yml（已 gitignore）
+    password: ${MYSQL_PASSWORD:}
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
@@ -41,23 +42,27 @@ springdoc:
 
 smart-agri:
   jwt:
-    secret-key: smart-agriculture-demo-secret-key-change-me-123456
+    # 勿提交真实密钥；生产必须通过环境变量 JWT_SECRET_KEY 注入
+    secret-key: ${JWT_SECRET_KEY:}
     expire-hours: 12
     issuer: smart-agriculture-server
     token-prefix: Bearer
     header-name: Authorization
     ignore-urls:
       - /auth/login
+      # 流水线入库（须同时配置 knowledge-graph.pipeline-ingest-key，否则接口返回未启用）
+      - /knowledge-graph/pipeline/ingest
       - /swagger-ui.html
       - /swagger-ui/**
       - /v3/api-docs/**
       - /doc.html
+  # 默认走阿里云百炼 OpenAI 兼容接口；api-key 务必通过环境变量 SMART_AGRI_AI_API_KEY 配置，勿提交密钥
   ai:
-    mock-enabled: true
+    mock-enabled: false
     provider: ${SMART_AGRI_AI_PROVIDER:openai-compatible}
-    model-name: ${SMART_AGRI_AI_MODEL:gpt-4.1-mini}
-    fallback-to-mock: ${SMART_AGRI_AI_FALLBACK_TO_MOCK:true}
-    base-url: ${SMART_AGRI_AI_BASE_URL:https://api.openai.com/v1}
+    model-name: ${SMART_AGRI_AI_MODEL:qwen3.5-flash}
+    fallback-to-mock: ${SMART_AGRI_AI_FALLBACK_TO_MOCK:false}
+    base-url: ${SMART_AGRI_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
     api-key: ${SMART_AGRI_AI_API_KEY:}
     chat-path: ${SMART_AGRI_AI_CHAT_PATH:/chat/completions}
     temperature: ${SMART_AGRI_AI_TEMPERATURE:0.4}
@@ -79,3 +84,28 @@ smart-agri:
     env-lookback-minutes: ${SMART_AGRI_INSPECTION_ENV_LOOKBACK_MINUTES:10}
     env-batch-size: ${SMART_AGRI_INSPECTION_ENV_BATCH_SIZE:200}
     device-batch-size: ${SMART_AGRI_INSPECTION_DEVICE_BATCH_SIZE:200}
+  rag:
+    enabled: ${SMART_AGRI_RAG_ENABLED:true}
+    base-url: ${SMART_AGRI_RAG_BASE_URL:http://localhost:9001}
+    answer-path: ${SMART_AGRI_RAG_ANSWER_PATH:/rag/answer}
+    connect-timeout-seconds: ${SMART_AGRI_RAG_CONNECT_TIMEOUT:5}
+    read-timeout-seconds: ${SMART_AGRI_RAG_READ_TIMEOUT:120}
+    # FastAPI 未启动、超时或返回错误时由 Spring 生成本地结构化兜底，避免前端仅显示「调用失败」
+    fallback-enabled: ${SMART_AGRI_RAG_FALLBACK_ENABLED:true}
+    default-top-k: ${SMART_AGRI_RAG_DEFAULT_TOP_K:10}
+    debug-prompt: ${SMART_AGRI_RAG_DEBUG_PROMPT:false}
+  knowledge-graph:
+    enabled: ${SMART_AGRI_KG_ENABLED:true}
+    base-url: ${SMART_AGRI_KG_BASE_URL:http://localhost:9001}
+    connect-timeout-seconds: ${SMART_AGRI_KG_CONNECT_TIMEOUT:5}
+    read-timeout-seconds: ${SMART_AGRI_KG_READ_TIMEOUT:60}
+    neo4j-uri: ${SMART_AGRI_NEO4J_URI:bolt://localhost:7687}
+    neo4j-user: ${SMART_AGRI_NEO4J_USER:neo4j}
+    # 与 Neo4j / docker-compose 一致；勿在仓库写生产口令，用环境变量注入
+    neo4j-password: ${SMART_AGRI_NEO4J_PASSWORD:}
+    neo4j-database: ${SMART_AGRI_NEO4J_DATABASE:}
+    neo4j-max-subgraph-paths: ${SMART_AGRI_NEO4J_MAX_PATHS:400}
+    pipeline-ingest-key: ${SMART_AGRI_KG_PIPELINE_KEY:}
+    auto-ingest-on-startup: ${SMART_AGRI_KG_AUTO_INGEST:false}
+    auto-ingest-bundle-path: ${SMART_AGRI_KG_AUTO_INGEST_PATH:}
+    rag-context-enabled: ${SMART_AGRI_KG_RAG_CONTEXT:true}

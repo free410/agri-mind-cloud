@@ -45,7 +45,13 @@ public class RoutingAiModelAdapter implements AiModelAdapter {
     }
 
     private boolean useRealModel() {
-        String provider = StringUtils.defaultIfBlank(aiProperties.getProvider(), aiProperties.isMockEnabled() ? "mock" : "openai-compatible");
+        String provider = StringUtils.trimToEmpty(aiProperties.getProvider());
+        if ("mock".equalsIgnoreCase(provider)) {
+            return false;
+        }
+        if (StringUtils.isBlank(provider)) {
+            return !aiProperties.isMockEnabled();
+        }
         return "openai-compatible".equalsIgnoreCase(provider) || "openai".equalsIgnoreCase(provider);
     }
 }

@@ -1,0 +1,574 @@
+{
+  "crop_rice": {
+    "description": "水稻是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_wheat": {
+    "description": "小麦是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_maize": {
+    "description": "玉米是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_soybean": {
+    "description": "大豆是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_potato": {
+    "description": "马铃薯是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_peanut": {
+    "description": "花生是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_rapeseed": {
+    "description": "油菜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_cotton": {
+    "description": "棉花是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_tomato": {
+    "description": "番茄是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_cucumber": {
+    "description": "黄瓜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_pepper": {
+    "description": "辣椒是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_eggplant": {
+    "description": "茄子是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_cabbage": {
+    "description": "大白菜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_broccoli": {
+    "description": "西兰花是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_carrot": {
+    "description": "胡萝卜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_spinach": {
+    "description": "菠菜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_lettuce": {
+    "description": "生菜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_celery": {
+    "description": "芹菜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_garlic": {
+    "description": "大蒜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_onion": {
+    "description": "洋葱是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_apple": {
+    "description": "苹果是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_pear": {
+    "description": "梨是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_peach": {
+    "description": "桃是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_grape": {
+    "description": "葡萄是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_citrus": {
+    "description": "柑橘是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_strawberry": {
+    "description": "草莓是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_watermelon": {
+    "description": "西瓜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "crop_melon": {
+    "description": "甜瓜是农业生产中的栽培对象，与病虫害、水肥管理、土壤环境及农艺措施存在多类关联，可用于风险研判与农技推荐。",
+    "aliases": []
+  },
+  "dis_rice_blast": {
+    "description": "稻瘟病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_rice_sheath_blight": {
+    "description": "水稻纹枯病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_rice_bacterial_leaf": {
+    "description": "水稻白叶枯病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_wheat_rust": {
+    "description": "小麦锈病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_wheat_scab": {
+    "description": "小麦赤霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_wheat_powdery": {
+    "description": "小麦白粉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_maize_leaf_blight": {
+    "description": "玉米大斑病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_maize_stalk_rot": {
+    "description": "玉米茎腐病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_potato_late_blight": {
+    "description": "马铃薯晚疫病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_potato_early_blight": {
+    "description": "马铃薯早疫病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_tomato_late_blight": {
+    "description": "番茄晚疫病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_tomato_early_blight": {
+    "description": "番茄早疫病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_tomato_leaf_mold": {
+    "description": "番茄叶霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_gray_mold": {
+    "description": "灰霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_cucumber_downy": {
+    "description": "黄瓜霜霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_cucumber_powdery": {
+    "description": "黄瓜白粉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_cucumber_wilt": {
+    "description": "黄瓜枯萎病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_pepper_phytophthora": {
+    "description": "辣椒疫病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_pepper_anthracnose": {
+    "description": "辣椒炭疽病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_apple_canker": {
+    "description": "苹果腐烂病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_apple_ring_rot": {
+    "description": "苹果轮纹病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_apple_powdery": {
+    "description": "苹果白粉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_citrus_canker": {
+    "description": "柑橘溃疡病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_citrus_sooty": {
+    "description": "柑橘煤烟病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_grape_downy": {
+    "description": "葡萄霜霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_grape_powdery": {
+    "description": "葡萄白粉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_strawberry_powdery": {
+    "description": "草莓白粉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_strawberry_gray": {
+    "description": "草莓灰霉病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_root_rot": {
+    "description": "根腐病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "dis_virus_complex": {
+    "description": "病毒病为田间常见病害类型，发生与作物品种、环境条件及栽培管理相关，宜结合绿色防控与监测预警。",
+    "aliases": []
+  },
+  "pest_rice_planthopper": {
+    "description": "稻飞虱为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_rice_stem_borer": {
+    "description": "二化螟为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_aphid": {
+    "description": "蚜虫为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_whitefly": {
+    "description": "烟粉虱为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_thrips": {
+    "description": "蓟马为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_spider_mite": {
+    "description": "红蜘蛛为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_cotton_bollworm": {
+    "description": "棉铃虫为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_armyworm": {
+    "description": "草地贪夜蛾为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_dbm": {
+    "description": "小菜蛾为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_cabbage_worm": {
+    "description": "菜青虫为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_leafminer": {
+    "description": "潜叶蝇为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_nematode": {
+    "description": "根结线虫为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_corn_borer": {
+    "description": "玉米螟为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "pest_fruit_fly": {
+    "description": "实蝇类为农业害虫或有害生物类别，需关注发生期与作物敏感期，采取综合防治。",
+    "aliases": []
+  },
+  "stress_drought": {
+    "description": "干旱胁迫描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_waterlogging": {
+    "description": "涝渍胁迫描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_salinity": {
+    "description": "盐胁迫描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_low_temp": {
+    "description": "低温冷害描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_high_temp": {
+    "description": "高温热害描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_low_light": {
+    "description": "弱光胁迫描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "stress_soil_moisture_low": {
+    "description": "土壤湿度偏低描述作物生长中的逆境因子，常与产量与品质波动相关，可通过灌溉、施肥与设施调控缓解。",
+    "aliases": []
+  },
+  "risk_water_stress": {
+    "description": "作物水分胁迫为知识网络中的抽象概念节点，用于连接胁迫、风险与农艺逻辑。",
+    "aliases": []
+  },
+  "env_high_humidity": {
+    "description": "高湿环境表示影响作物生长与病害发生的环境情境，在图谱中常作为诱发或加重因子的上下文节点。",
+    "aliases": []
+  },
+  "env_continuous_rain": {
+    "description": "持续阴雨表示影响作物生长与病害发生的环境情境，在图谱中常作为诱发或加重因子的上下文节点。",
+    "aliases": []
+  },
+  "env_dense_planting": {
+    "description": "密植郁闭表示影响作物生长与病害发生的环境情境，在图谱中常作为诱发或加重因子的上下文节点。",
+    "aliases": []
+  },
+  "env_poor_ventilation": {
+    "description": "通风不良表示影响作物生长与病害发生的环境情境，在图谱中常作为诱发或加重因子的上下文节点。",
+    "aliases": []
+  },
+  "env_heavy_dew": {
+    "description": "结露重表示影响作物生长与病害发生的环境情境，在图谱中常作为诱发或加重因子的上下文节点。",
+    "aliases": []
+  },
+  "soil_sandy": {
+    "description": "砂质土反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "soil_clay": {
+    "description": "黏土反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "soil_loam": {
+    "description": "壤土反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "soil_acid": {
+    "description": "酸性土反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "soil_alkaline": {
+    "description": "碱性土反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "soil_low_organic": {
+    "description": "有机质偏低反映土壤类型或肥力相关特征，与施肥、灌溉及根系环境密切相关。",
+    "aliases": []
+  },
+  "nut_n": {
+    "description": "氮素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_p": {
+    "description": "磷素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_k": {
+    "description": "钾素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_ca": {
+    "description": "钙素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_mg": {
+    "description": "镁素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_b": {
+    "description": "硼素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_zn": {
+    "description": "锌素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_fe": {
+    "description": "铁素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_mn": {
+    "description": "锰素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "nut_s": {
+    "description": "硫素为植物必需营养元素维度，与缺素诊断与肥料运筹直接相关。",
+    "aliases": []
+  },
+  "def_n": {
+    "description": "缺氮表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_p": {
+    "description": "缺磷表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_k": {
+    "description": "缺钾表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_ca": {
+    "description": "缺钙表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_mg": {
+    "description": "缺镁表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_b": {
+    "description": "缺硼表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "def_zn": {
+    "description": "缺锌表示养分亏缺状态，可通过土壤与植株诊断结合测土配方施肥矫正。",
+    "aliases": []
+  },
+  "prac_irrigation": {
+    "description": "灌溉补水为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_drip": {
+    "description": "滴灌为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_sprinkler": {
+    "description": "喷灌为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_drainage": {
+    "description": "开沟排渍为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_mulch": {
+    "description": "地膜覆盖为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_rotation": {
+    "description": "轮作为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_deep_till": {
+    "description": "深松整地为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_formula_fert": {
+    "description": "测土配方施肥为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_ipm": {
+    "description": "病虫害统防统治为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_yellow_sticky": {
+    "description": "黄板诱杀为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_bio_control": {
+    "description": "生物防治为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_prune": {
+    "description": "整枝疏叶为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_ventilation": {
+    "description": "通风降湿为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_resistant_var": {
+    "description": "选用抗病品种为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_seed_treat": {
+    "description": "种子处理为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_soil_test": {
+    "description": "土壤检测为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_compost": {
+    "description": "有机肥还田为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "prac_greenhouse_manage": {
+    "description": "温湿度调控为可操作的农艺或管理措施，用于改善墒情、养分、群体结构或病虫害防控效果。",
+    "aliases": []
+  },
+  "fert_urea": {
+    "description": "尿素为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_dap": {
+    "description": "磷酸二铵为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_kcl": {
+    "description": "氯化钾为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_compound": {
+    "description": "复合肥为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_lime": {
+    "description": "石灰为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_borate": {
+    "description": "硼肥为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "fert_zn_sulfate": {
+    "description": "硫酸锌为常见肥料或调理剂类型，用于补充氮磷钾及中微量元素。",
+    "aliases": []
+  },
+  "chem_fungicide": {
+    "description": "杀菌剂（合理使用）为农药防控手段的抽象分类，实际使用须遵守登记与安全间隔期规定。",
+    "aliases": []
+  },
+  "chem_insecticide": {
+    "description": "杀虫剂（合理使用）为农药防控手段的抽象分类，实际使用须遵守登记与安全间隔期规定。",
+    "aliases": []
+  },
+  "stage_seedling": {
+    "description": "苗期表示作物生育进程阶段，不同阶段对水肥药及逆境敏感性不同。",
+    "aliases": []
+  },
+  "stage_flowering": {
+    "description": "开花期表示作物生育进程阶段，不同阶段对水肥药及逆境敏感性不同。",
+    "aliases": []
+  },
+  "stage_fruit": {
+    "description": "果实膨大期表示作物生育进程阶段，不同阶段对水肥药及逆境敏感性不同。",
+    "aliases": []
+  },
+  "stage_grain_fill": {
+    "description": "灌浆期表示作物生育进程阶段，不同阶段对水肥药及逆境敏感性不同。",
+    "aliases": []
+  },
+  "sym_yellow_leaf": {
+    "description": "叶片黄化为田间可观察的症状表型，可用于辅助推断缺素或病害方向（须结合检测）。",
+    "aliases": []
+  },
+  "sym_spot": {
+    "description": "病斑为田间可观察的症状表型，可用于辅助推断缺素或病害方向（须结合检测）。",
+    "aliases": []
+  },
+  "sym_wilt": {
+    "description": "萎蔫为田间可观察的症状表型，可用于辅助推断缺素或病害方向（须结合检测）。",
+    "aliases": []
+  },
+  "sym_mold": {
+    "description": "霉层为田间可观察的症状表型，可用于辅助推断缺素或病害方向（须结合检测）。",
+    "aliases": []
+  }
+}

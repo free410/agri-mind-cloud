@@ -137,6 +137,10 @@ public class AiServiceImpl extends ServiceImpl<AiChatLogMapper, AiChatLog> imple
             saveChatLog(resolveSessionId(null), promptContext, response.getContent(), response.getModelName(), createTime, createTime, 1);
             return vo;
         } catch (Exception exception) {
+            if (!aiProperties.isFallbackToMock()) {
+                log.error("预警AI分析调用失败，warningId={}", warningId, exception);
+                throw new BusinessException(ResultCode.SYSTEM_ERROR, "预警 AI 分析失败：" + exception.getMessage());
+            }
             log.warn("预警AI分析调用失败，warningId={}, 将使用本地mock兜底。原因={}", warningId, exception.getMessage());
             WarningAiAnalysisVO fallback = buildFallbackWarningAnalysis(warningId, promptContext);
             persistWarningAiAnalysis(warningId, "local-mock-fallback", fallback, "fallback", null);
@@ -156,6 +160,10 @@ public class AiServiceImpl extends ServiceImpl<AiChatLogMapper, AiChatLog> imple
             saveChatLog(resolveSessionId(null), promptContext, response.getContent(), response.getModelName(), createTime, createTime, 1);
             return vo;
         } catch (Exception exception) {
+            if (!aiProperties.isFallbackToMock()) {
+                log.error("预警处置建议调用失败，warningId={}", warningId, exception);
+                throw new BusinessException(ResultCode.SYSTEM_ERROR, "预警处置建议生成失败：" + exception.getMessage());
+            }
             log.warn("预警处置建议调用失败，warningId={}, 将使用本地mock兜底。原因={}", warningId, exception.getMessage());
             WarningDisposalSuggestionVO fallback = buildFallbackWarningDisposal(warningId, promptContext);
             persistWarningAiAnalysis(warningId, "local-mock-fallback", null, "fallback", fallback);
@@ -253,6 +261,9 @@ public class AiServiceImpl extends ServiceImpl<AiChatLogMapper, AiChatLog> imple
                                                              AiPromptContext promptContext) {
         JsonNode jsonNode = parseJsonNode(rawContent);
         if (jsonNode == null) {
+            if (!aiProperties.isFallbackToMock()) {
+                throw new BusinessException(ResultCode.SYSTEM_ERROR, "大模型返回无法解析为 JSON，请调整提示词或重试");
+            }
             return buildFallbackWarningAnalysis(warningId, promptContext);
         }
 
@@ -280,6 +291,9 @@ public class AiServiceImpl extends ServiceImpl<AiChatLogMapper, AiChatLog> imple
                                                                      AiPromptContext promptContext) {
         JsonNode jsonNode = parseJsonNode(rawContent);
         if (jsonNode == null) {
+            if (!aiProperties.isFallbackToMock()) {
+                throw new BusinessException(ResultCode.SYSTEM_ERROR, "大模型返回无法解析为 JSON，请调整提示词或重试");
+            }
             return buildFallbackWarningDisposal(warningId, promptContext);
         }
 
