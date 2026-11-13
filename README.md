@@ -96,7 +96,7 @@
 
 | 入口 | 地址 |
 |------|------|
-| 管理端（Vue） | [http://localhost:8088](http://localhost:8088)（默认账号见 `docs/端到端联调与测试手册.md`，一般为 `admin` / `123456`） |
+| 管理端（Vue） | [http://localhost:8088](http://localhost:8088)（默认账号见 `docs/端到端联调与测试手册.md`；初始账号 `admin`，口令由数据库初始化脚本写入，首次登录后请立即修改） |
 | 后端 Swagger | [http://localhost:8090/api/swagger-ui.html](http://localhost:8090/api/swagger-ui.html) |
 | RAG 直连 | [http://localhost:9001/docs](http://localhost:9001/docs) |
 | Neo4j Browser | [http://localhost:7474](http://localhost:7474) |

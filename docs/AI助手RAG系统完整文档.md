@@ -440,7 +440,7 @@ LLM_MAX_TOKENS=3072
 # ===== Neo4j 图谱配置 =====
 NEO4J_URI=bolt://localhost:7687
 NEO4J_USER=neo4j
-NEO4J_PASSWORD=changeme-neo4j-dev-only
+NEO4J_PASSWORD=<与根目录 .env 中 SMARTAGRI_NEO4J_PASSWORD 保持一致，勿写死真实口令>
 
 # ===== Spring Boot 对接 =====
 SPRING_BACKEND_BASE_URL=http://localhost:8080/api
