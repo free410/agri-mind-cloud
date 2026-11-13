@@ -70,7 +70,7 @@ class CrawlStorage:
                 "last_run_summary": None,
                 "updated_at": None,
             }
-        with self.manifest_path.open("r", encoding="utf-8") as file:
+        with self.manifest_path.open("r", encoding="utf-8-sig") as file:
             data = json.load(file)
         return {
             "processed_urls": data.get("processed_urls", {}),

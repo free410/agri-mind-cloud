@@ -9,6 +9,7 @@ python scripts/index_knowledge.py --chunk-size 520 --overlap 100
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
@@ -17,6 +18,14 @@ CURRENT_FILE = Path(__file__).resolve()
 PROJECT_ROOT = CURRENT_FILE.parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
+
+# 须在导入 index_service 单例之前设置：否则 __init__ 已绑定 OpenAI embedding
+if "--mock-embedding" in sys.argv or os.getenv("INDEX_FORCE_MOCK_EMBEDDING", "").strip().lower() in (
+    "1",
+    "true",
+    "yes",
+):
+    os.environ["INDEX_FORCE_MOCK_EMBEDDING"] = "1"
 
 from app.services.knowledge.index_service import knowledge_index_service  # noqa: E402
 
@@ -34,6 +43,16 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="不合并 data/cleaned/*.jsonl（仅用 knowledge/ 下文件）",
     )
+    parser.add_argument(
+        "--cleaned-dir",
+        default=None,
+        help="抓取清洗 JSONL 目录，覆盖默认 data/cleaned（可与 filter_cleaned_jsonl 输出目录配合）",
+    )
+    parser.add_argument(
+        "--mock-embedding",
+        action="store_true",
+        help="强制使用本地 mock 向量写入 Qdrant（DashScope/OpenAI embedding 不可用或 400 时使用）",
+    )
     return parser.parse_args()
 
 
@@ -47,6 +66,7 @@ def main():
         recreate_collection=args.recreate,
         dry_run=args.dry_run,
         include_cleaned_jsonl=not args.skip_cleaned,
+        cleaned_jsonl_dir=args.cleaned_dir,
     )
 
     print("\n===== 知识库导入结果 =====")

@@ -8,6 +8,7 @@ html,
 body,
 #app {
   width: 100%;
+  height: 100%;
   min-height: 100%;
   margin: 0;
   font-family: 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
@@ -109,6 +110,10 @@ span {
   display: flex;
   flex-direction: column;
   gap: var(--app-section-gap);
+  width: 100%;
+  flex: 1 0 auto;
+  min-height: min-content;
+  overflow: visible;
 }
 
 .page-section {
@@ -145,9 +150,9 @@ span {
 
 .page-banner {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
+  gap: 14px;
   min-height: var(--app-banner-min-height);
   padding: var(--app-banner-padding-y) var(--app-banner-padding-x);
   border-radius: var(--app-radius);
@@ -162,8 +167,10 @@ span {
 
 .page-banner__main {
   display: flex;
-  flex-direction: column;
-  gap: 6px;
+  flex-direction: row;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -171,28 +178,28 @@ span {
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  padding: 6px 12px;
+  padding: 4px 10px;
   border-radius: 999px;
   border: 1px solid rgba(23, 138, 98, 0.20);
   background: rgba(23, 138, 98, 0.08);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--app-primary-dark);
 }
 
 .page-banner__title {
   margin: 0;
-  font-size: 24px;
+  font-size: 20px;
   line-height: 1.2;
   font-weight: 700;
   letter-spacing: 0.2px;
 }
 
 .page-banner__desc {
-  max-width: 520px;
+  max-width: 640px;
   margin: 0;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--app-text-secondary);
 }
 
@@ -200,14 +207,16 @@ span {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 10px;
+  min-width: 0;
 }
 
 .page-banner__meta {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   padding: 0 12px;
   height: 34px;
   border-radius: 999px;
@@ -216,6 +225,22 @@ span {
   font-size: 12px;
   font-weight: 600;
   color: var(--app-text-secondary);
+}
+
+/* 浅色横幅上的指标胶囊：统一为深色文字，避免各页面写成白色导致不可读 */
+.page-banner__meta .meta-label {
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: var(--app-text-secondary) !important;
+}
+
+.page-banner__meta strong {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  color: var(--app-text) !important;
 }
 
 .page-overview-grid {
@@ -248,7 +273,7 @@ span {
   flex-direction: column;
   justify-content: space-between;
   min-height: var(--app-stat-card-height);
-  padding: 16px 18px;
+  padding: 12px 14px;
   border-radius: var(--app-radius-md);
   transition:
     transform 0.2s ease,
@@ -265,15 +290,15 @@ span {
 
 .page-overview-card__label {
   display: block;
-  margin-bottom: 8px;
-  font-size: 13px;
+  margin-bottom: 6px;
+  font-size: 12px;
   color: var(--app-text-secondary);
 }
 
 .page-overview-card__value {
   display: block;
-  margin-bottom: 8px;
-  font-size: 28px;
+  margin-bottom: 4px;
+  font-size: 24px;
   line-height: 1;
   font-weight: 700;
   color: var(--app-text);
@@ -282,7 +307,7 @@ span {
 .page-overview-card__desc {
   margin: 0;
   font-size: 12px;
-  line-height: 1.55;
+  line-height: 1.5;
   color: var(--app-text-tertiary);
 }
 

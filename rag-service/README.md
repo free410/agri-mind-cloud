@@ -96,13 +96,25 @@ python app/scripts/crawl_china_agri_knowledge.py --source 中国农业农村信�
 python app/scripts/crawl_china_agri_knowledge.py --force --limit 2
 ```
 
+### 3.4 抓取正文清洗与农技筛选
+
+- **入库前清洗**（已实现）：解析 HTML 后会对正文执行 `clean_for_index()`，去除责任编辑、来源行、分享引导等噪声，减轻向量污染。
+- **农技向筛选**（可选）：综合新闻与生产技术混杂时，可先筛再灌库：
+
+```bash
+python scripts/filter_cleaned_jsonl.py --input data/cleaned --output data/cleaned_agronomy --min-score 2
+```
+
+说明：`--min-score` 为标题+正文中「农技关键词」命中种类数下限；默认还会丢弃标题含党建/会议/禁渔等非生产向文章。筛结果写入 `data/cleaned_agronomy/*.jsonl`。
+
 ## 4. 知识库导入
 
 ### 4.1 本地知识文档目录
 
 - `knowledge/base/`
 - `knowledge/sop/`
-- `knowledge/crop/`
+- `knowledge/crop/`（作物栽培、灌溉、生育期等，**推荐主力放农技 md**）
+- `knowledge/tech/`（与 crop 相同类型 `crop_guide`，便于单独管理规程/转化 PDF 的 md）
 - `knowledge/device/`
 
 支持：
@@ -124,6 +136,20 @@ python scripts/index_knowledge.py --dry-run
 python scripts/index_knowledge.py --recreate
 python scripts/index_knowledge.py --chunk-size 520 --overlap 100
 ```
+
+仅使用 **农技筛过后的抓取结果**（不包含默认 `data/cleaned` 全量）时：
+
+```bash
+python scripts/index_knowledge.py --cleaned-dir data/cleaned_agronomy
+```
+
+只要本地 `knowledge/`、**不要**任何抓取 jsonl：
+
+```bash
+python scripts/index_knowledge.py --skip-cleaned
+```
+
+**推荐实践**：以 `knowledge/crop/`、`knowledge/tech/` 自建农技语料为主；抓取新闻仅作补充，并用 `filter_cleaned_jsonl.py` 控制入库质量。
 
 ## 5. 抓取文档 metadata
 

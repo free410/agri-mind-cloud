@@ -15,6 +15,8 @@ _RAG_ANSWER_TOP_LEVEL: dict[str, str] = {
     "businessContextHint": "business_context_hint",
     "needStructured": "need_structured",
     "retrievedKnowledgeChunks": "retrieved_knowledge_chunks",
+    # 图谱引用字段映射（漏掉导致 subgraph 数据丢失！）
+    "citedKnowledgeGraph": "cited_knowledge_graph",
 }
 
 

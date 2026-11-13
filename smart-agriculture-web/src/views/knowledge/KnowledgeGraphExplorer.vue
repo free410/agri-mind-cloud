@@ -3,7 +3,6 @@
     <header class="kg-toolbar page-card">
       <div class="kg-toolbar__title">
         <div class="kg-toolbar__heading">
-          <h1>农业知识网络</h1>
           <span class="kg-toolbar__badge">Neo4j · 多布局 · 路径分析</span>
         </div>
         <p>业务可读：实体说明、一度关系、类型分布 · 炫酷：力导向 / 环形 / 辐射分层</p>
@@ -1093,16 +1092,22 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 14px;
-  min-height: calc(100vh - 120px);
+  flex: 1;
+  min-height: 0;
 }
 
 .kg-toolbar {
   display: flex;
   flex-wrap: wrap;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  padding: 16px 18px;
+  gap: 12px;
+  padding: 12px 16px;
+  background:
+    radial-gradient(circle at top right, rgba(76, 139, 245, 0.1), transparent 34%),
+    radial-gradient(circle at left bottom, rgba(23, 138, 98, 0.12), transparent 28%),
+    linear-gradient(135deg, #f6fcf8 0%, #eff8f3 56%, #f7fbf9 100%);
+  box-shadow: var(--app-shadow-hero);
 }
 
 .kg-toolbar__heading {
@@ -1116,12 +1121,9 @@ onUnmounted(() => {
 .kg-toolbar__title h1 {
   margin: 0;
   font-size: 20px;
-  font-weight: 800;
-  letter-spacing: 0.02em;
-  background: linear-gradient(120deg, var(--app-text-strong) 0%, rgba(72, 187, 120, 0.95) 100%);
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  color: var(--app-text);
 }
 
 .kg-toolbar__badge {
@@ -1138,8 +1140,8 @@ onUnmounted(() => {
 
 .kg-toolbar__title p {
   margin: 0;
-  font-size: 13px;
-  color: var(--app-text-muted);
+  font-size: 12px;
+  color: var(--app-text-secondary);
 }
 
 .kg-toolbar__stats {
@@ -1183,7 +1185,7 @@ onUnmounted(() => {
   display: flex;
   gap: 14px;
   flex: 1;
-  min-height: 560px;
+  min-height: 400px;
 }
 
 .kg-side {
@@ -1496,8 +1498,8 @@ onUnmounted(() => {
   position: relative;
   z-index: 2;
   flex: 1;
-  min-height: 520px;
   width: 100%;
+  min-height: 400px;
 }
 
 .kg-chart-hint {

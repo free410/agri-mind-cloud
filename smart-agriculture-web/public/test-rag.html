@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head><title>RAG API Test</title></head>
+<body>
+<h1>RAG API 测试页面</h1>
+<div>
+  <button onclick="testDirect()">1. 直接测试 Spring Boot API (localhost:8090)</button>
+  <button onclick="testProxy()">2. 测试 Vite 代理 (localhost:5173/api)</button>
+</div>
+<pre id="output" style="background:#f0f0f0;padding:10px;margin-top:20px;"></pre>
+
+<script>
+const output = document.getElementById('output');
+
+function log(msg) {
+  output.textContent += msg + '\n';
+  console.log(msg);
+}
+
+async function testDirect() {
+  log('=== 测试直接调用 Spring Boot API ===');
+  try {
+    // 先登录
+    const loginRes = await fetch('http://localhost:8090/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username:'admin', password:'admin123'})
+    });
+    const loginData = await loginRes.json();
+    log('登录状态: ' + loginRes.status);
+    const token = loginData.data?.token;
+    if (!token) { log('登录失败: ' + JSON.stringify(loginData)); return; }
+    log('Token: ' + token.substring(0,30) + '...');
+    
+    // 调用 RAG API
+    const ragRes = await fetch('http://localhost:8090/api/ai/rag/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({query:'番茄叶片发黄怎么办', mode:'knowledge', top_k:3})
+    });
+    const ragData = await ragRes.json();
+    log('RAG API 状态: ' + ragRes.status);
+    log('响应结构: ' + JSON.stringify(Object.keys(ragData.data || {})));
+    log('citedKnowledgeSources: ' + (ragData.data?.citedKnowledgeSources?.length || 0) + ' 条');
+    if (ragData.data?.citedKnowledgeSources?.length > 0) {
+      log('第一条: ' + JSON.stringify(ragData.data.citedKnowledgeSources[0], null, 2));
+    }
+  } catch (e) {
+    log('错误: ' + e.message);
+  }
+}
+
+async function testProxy() {
+  log('=== 测试 Vite 代理 ===');
+  try {
+    const loginRes = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({username:'admin', password:'admin123'})
+    });
+    const loginData = await loginRes.json();
+    log('登录状态: ' + loginRes.status);
+    const token = loginData.data?.token;
+    if (!token) { log('登录失败'); return; }
+    
+    const ragRes = await fetch('/api/ai/rag/chat', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({query:'番茄叶片发黄怎么办', mode:'knowledge', top_k:3})
+    });
+    const ragData = await ragRes.json();
+    log('RAG API 状态: ' + ragRes.status);
+    log('响应结构: ' + JSON.stringify(Object.keys(ragData.data || {})));
+    log('citedKnowledgeSources: ' + (ragData.data?.citedKnowledgeSources?.length || 0) + ' 条');
+  } catch (e) {
+    log('错误: ' + e.message);
+  }
+}
+</script>
+</body>
+</html>

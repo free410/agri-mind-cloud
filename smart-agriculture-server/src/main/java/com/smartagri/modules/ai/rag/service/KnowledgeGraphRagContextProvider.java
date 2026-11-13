@@ -1,6 +1,7 @@
 package com.smartagri.modules.ai.rag.service;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.smartagri.common.properties.KnowledgeGraphProperties;
 import com.smartagri.modules.ai.rag.vo.RagGraphCitationVO;
 import com.smartagri.modules.knowledgegraph.service.KnowledgeGraphNeo4jService;
@@ -9,7 +10,9 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 根据用户问题检索图谱实体，生成注入 RAG 的短文本与引用列表。
@@ -21,21 +24,27 @@ public class KnowledgeGraphRagContextProvider {
     private static final int SEARCH_LIMIT = 8;
     private static final int DETAIL_FOR_FIRST = 4;
     private static final int REL_OUT_PREVIEW = 5;
+    private static final int SUBGRAPH_DEPTH = 1;  // 迷你图谱展开深度
 
     private final KnowledgeGraphProperties graphProperties;
     private final KnowledgeGraphNeo4jService neo4jService;
+    private final ObjectMapper objectMapper;
 
     public KnowledgeGraphRagContextProvider(KnowledgeGraphProperties graphProperties,
-                                            KnowledgeGraphNeo4jService neo4jService) {
+                                            KnowledgeGraphNeo4jService neo4jService,
+                                            ObjectMapper objectMapper) {
         this.graphProperties = graphProperties;
         this.neo4jService = neo4jService;
+        this.objectMapper = objectMapper;
     }
 
     public KnowledgeGraphRagSnippet build(String userQuery) {
         if (!graphProperties.isEnabled() || !graphProperties.isRagContextEnabled()) {
+            log.warn("图谱RAG上下文已禁用");
             return KnowledgeGraphRagSnippet.empty();
         }
         if (StringUtils.isBlank(graphProperties.getNeo4jPassword())) {
+            log.warn("Neo4j密码未配置");
             return KnowledgeGraphRagSnippet.empty();
         }
         String q = StringUtils.trimToEmpty(userQuery);
@@ -43,11 +52,14 @@ public class KnowledgeGraphRagContextProvider {
             q = q.substring(0, 120);
         }
         if (StringUtils.isBlank(q)) {
+            log.warn("用户问题为空");
             return KnowledgeGraphRagSnippet.empty();
         }
         try {
             JsonNode hits = neo4jService.search(q, SEARCH_LIMIT);
+
             if (!hits.isArray() || hits.isEmpty()) {
+                log.warn("搜索结果为空");
                 return KnowledgeGraphRagSnippet.empty();
             }
             List<RagGraphCitationVO> citations = new ArrayList<>();
@@ -58,7 +70,25 @@ public class KnowledgeGraphRagContextProvider {
                 String id = h.path("id").asText("");
                 String name = h.path("name").asText(id);
                 String kind = h.path("kind").asText("concept");
-                citations.add(RagGraphCitationVO.builder().id(id).title(name).kind(kind).build());
+
+                // 获取子图数据用于前端可视化
+                Map<String, Object> subgraph = null;
+                try {
+                    JsonNode subgraphJson = neo4jService.subgraph(id, SUBGRAPH_DEPTH);
+
+                    if (subgraphJson != null && subgraphJson.has("nodes") && subgraphJson.path("nodes").size() > 0) {
+                        subgraph = objectMapper.convertValue(subgraphJson, Map.class);
+                    }
+                } catch (Exception ex) {
+                    log.warn("获取实体 {} 的子图失败: {}", id, ex.getMessage());
+                }
+
+                citations.add(RagGraphCitationVO.builder()
+                        .id(id)
+                        .title(name)
+                        .kind(kind)
+                        .subgraph(subgraph)
+                        .build());
                 sb.append("- ").append(name).append("（").append(kind).append("，id=").append(id).append("）");
                 if (i < DETAIL_FOR_FIRST) {
                     appendRelationPreview(sb, id);
@@ -67,7 +97,7 @@ public class KnowledgeGraphRagContextProvider {
             }
             return new KnowledgeGraphRagSnippet(sb.toString().trim(), List.copyOf(citations));
         } catch (Exception ex) {
-            log.warn("构建知识图谱 RAG 上下文失败: {}", ex.getMessage());
+            log.error("构建知识图谱 RAG 上下文失败: {}", ex.getMessage(), ex);
             return KnowledgeGraphRagSnippet.empty();
         }
     }

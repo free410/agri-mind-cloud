@@ -1,0 +1,12 @@
+.git
+.idea
+**/.vscode
+**/node_modules
+**/target
+**/__pycache__
+**/.venv
+**/venv
+**/.env
+**/.env.*
+!**/.env.example
+smart-agriculture-web/dist

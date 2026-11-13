@@ -49,20 +49,14 @@ public class WarningRuleEngineServiceImpl implements WarningRuleEngineService {
         Long deviceId = environmentData.getDeviceId();
         Long cropId = resolveCurrentCropId(farmlandId);
 
-        boolean hasConfiguredRules = false;
-        hasConfiguredRules |= appendMetricCommands(commands, environmentData, triggerTime,
+        appendMetricWithFallback(commands, environmentData, triggerTime,
                 WarningRuleMetricKeyEnum.TEMPERATURE.getCode(), environmentData.getTemperature(), farmlandId, deviceId, cropId, "℃");
-        hasConfiguredRules |= appendMetricCommands(commands, environmentData, triggerTime,
+        appendMetricWithFallback(commands, environmentData, triggerTime,
                 WarningRuleMetricKeyEnum.HUMIDITY.getCode(), environmentData.getHumidity(), farmlandId, deviceId, cropId, "%");
-        hasConfiguredRules |= appendMetricCommands(commands, environmentData, triggerTime,
+        appendMetricWithFallback(commands, environmentData, triggerTime,
                 WarningRuleMetricKeyEnum.SOIL_MOISTURE.getCode(), environmentData.getSoilMoisture(), farmlandId, deviceId, cropId, "%");
-        hasConfiguredRules |= appendMetricCommands(commands, environmentData, triggerTime,
+        appendMetricWithFallback(commands, environmentData, triggerTime,
                 WarningRuleMetricKeyEnum.LIGHT.getCode(), environmentData.getLightIntensity(), farmlandId, deviceId, cropId, "lux");
-
-        if (!hasConfiguredRules) {
-            // 兼容老版本：当规则中心尚未初始化时，保留默认兜底策略，避免比赛演示“无预警”。
-            commands.addAll(fallbackEnvironmentRules(environmentData, cropId, triggerTime));
-        }
 
         return commands;
     }
@@ -219,30 +213,62 @@ public class WarningRuleEngineServiceImpl implements WarningRuleEngineService {
                 .orElse(null);
     }
 
-    private List<WarningTriggerCommand> fallbackEnvironmentRules(EnvironmentData environmentData,
-                                                                 Long cropId,
-                                                                 LocalDateTime triggerTime) {
+    /**
+     * 仅当该指标没有配置任何启用规则时，才使用该指标的默认兜底规则。
+     */
+    private void appendMetricWithFallback(List<WarningTriggerCommand> commands,
+                                          EnvironmentData environmentData,
+                                          LocalDateTime triggerTime,
+                                          String metricKey,
+                                          BigDecimal metricValue,
+                                          Long farmlandId,
+                                          Long deviceId,
+                                          Long cropId,
+                                          String unit) {
+        boolean hasRules = appendMetricCommands(commands, environmentData, triggerTime,
+                metricKey, metricValue, farmlandId, deviceId, cropId, unit);
+        if (!hasRules) {
+            commands.addAll(fallbackMetricRules(metricKey, environmentData, cropId, triggerTime));
+        }
+    }
+
+    private List<WarningTriggerCommand> fallbackMetricRules(String metricKey,
+                                                            EnvironmentData environmentData,
+                                                            Long cropId,
+                                                            LocalDateTime triggerTime) {
         List<WarningTriggerCommand> commands = new ArrayList<>();
-
-        if (environmentData.getTemperature() != null && environmentData.getTemperature().compareTo(new BigDecimal("32")) > 0) {
-            commands.add(buildFallbackCommand(WarningTypeEnum.TEMPERATURE_HIGH.getCode(), WarningLevelEnum.HIGH.getCode(),
-                    environmentData, cropId, triggerTime, "温度过高"));
+        switch (metricKey) {
+            case "temperature" -> {
+                if (environmentData.getTemperature() != null
+                        && environmentData.getTemperature().compareTo(new BigDecimal("32")) > 0) {
+                    commands.add(buildFallbackCommand(WarningTypeEnum.TEMPERATURE_HIGH.getCode(),
+                            WarningLevelEnum.HIGH.getCode(), environmentData, cropId, triggerTime, "温度过高"));
+                }
+                if (environmentData.getTemperature() != null
+                        && environmentData.getTemperature().compareTo(new BigDecimal("10")) < 0) {
+                    commands.add(buildFallbackCommand(WarningTypeEnum.TEMPERATURE_LOW.getCode(),
+                            WarningLevelEnum.MEDIUM.getCode(), environmentData, cropId, triggerTime, "温度过低"));
+                }
+            }
+            case "soil_moisture" -> {
+                if (environmentData.getSoilMoisture() != null
+                        && environmentData.getSoilMoisture().compareTo(new BigDecimal("30")) < 0) {
+                    commands.add(buildFallbackCommand(WarningTypeEnum.SOIL_MOISTURE_LOW.getCode(),
+                            WarningLevelEnum.HIGH.getCode(), environmentData, cropId, triggerTime, "土壤湿度过低"));
+                }
+            }
+            case "light" -> {
+                if (environmentData.getLightIntensity() != null
+                        && (environmentData.getLightIntensity().compareTo(new BigDecimal("5000")) < 0
+                        || environmentData.getLightIntensity().compareTo(new BigDecimal("50000")) > 0)) {
+                    commands.add(buildFallbackCommand(WarningTypeEnum.LIGHT_ABNORMAL.getCode(),
+                            WarningLevelEnum.MEDIUM.getCode(), environmentData, cropId, triggerTime, "光照异常"));
+                }
+            }
+            default -> {
+                // 湿度等指标暂无默认兜底规则
+            }
         }
-        if (environmentData.getTemperature() != null && environmentData.getTemperature().compareTo(new BigDecimal("10")) < 0) {
-            commands.add(buildFallbackCommand(WarningTypeEnum.TEMPERATURE_LOW.getCode(), WarningLevelEnum.MEDIUM.getCode(),
-                    environmentData, cropId, triggerTime, "温度过低"));
-        }
-        if (environmentData.getSoilMoisture() != null && environmentData.getSoilMoisture().compareTo(new BigDecimal("30")) < 0) {
-            commands.add(buildFallbackCommand(WarningTypeEnum.SOIL_MOISTURE_LOW.getCode(), WarningLevelEnum.HIGH.getCode(),
-                    environmentData, cropId, triggerTime, "土壤湿度过低"));
-        }
-        if (environmentData.getLightIntensity() != null
-                && (environmentData.getLightIntensity().compareTo(new BigDecimal("5000")) < 0
-                || environmentData.getLightIntensity().compareTo(new BigDecimal("50000")) > 0)) {
-            commands.add(buildFallbackCommand(WarningTypeEnum.LIGHT_ABNORMAL.getCode(), WarningLevelEnum.MEDIUM.getCode(),
-                    environmentData, cropId, triggerTime, "光照异常"));
-        }
-
         return commands;
     }
 

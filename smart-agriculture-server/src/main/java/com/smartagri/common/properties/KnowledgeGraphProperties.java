@@ -1,11 +1,22 @@
 package com.smartagri.common.properties;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Data;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+/**
+ * Neo4j 口令与 docker-compose 中 NEO4J_AUTH 斜杠后部分一致。
+ * 若环境变量 NEO4J_PASSWORD 被设为空字符串，Spring 会绑定为空；此处回退到开发默认，避免误连。
+ */
+@Slf4j
 @Data
 @ConfigurationProperties(prefix = "smart-agri.knowledge-graph")
 public class KnowledgeGraphProperties {
+
+    /** 与 docker-compose / stack.env.example 默认一致 */
+    public static final String DEV_FALLBACK_NEO4J_PASSWORD = "changeme-neo4j-dev-only";
 
     /**
      * 是否启用知识图谱 REST 接口（Spring 直连 Neo4j）。
@@ -60,4 +71,14 @@ public class KnowledgeGraphProperties {
      * 智能问答调用 RAG 前是否注入图谱检索摘要（需 Neo4j 可用）。
      */
     private boolean ragContextEnabled = true;
+
+    @PostConstruct
+    public void normalizeNeo4jPasswordIfBlank() {
+        if (StringUtils.isBlank(neo4jPassword)) {
+            neo4jPassword = DEV_FALLBACK_NEO4J_PASSWORD;
+            log.warn(
+                    "neo4j-password 与环境变量均为空，已回退开发默认口令（与 docker-compose 默认 NEO4J_AUTH 一致）。"
+                            + " 生产务必配置 SMART_AGRI_NEO4J_PASSWORD。");
+        }
+    }
 }

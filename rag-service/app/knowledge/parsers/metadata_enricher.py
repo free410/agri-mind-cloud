@@ -38,12 +38,19 @@ def detect_warning_type(text: str) -> str | None:
 
 
 def infer_topic(source: CrawlSourceConfig, text: str) -> str:
-    if any(keyword in text for keyword in ["病虫害", "防治", "农药"]):
-        return "warning"
-    if any(keyword in text for keyword in ["灌溉", "水肥", "墒情"]):
+    """优先识别作物/水肥管理类，减少将综合新闻误判为 warning。"""
+    if any(k in text for k in ["水稻", "小麦", "玉米", "大豆", "分蘖", "育秧", "移栽", "抽穗", "灌浆", "穗肥"]):
+        if any(k in text for k in ["灌溉", "水层", "搁田", "晒田", "排水", "灌水", "淹水", "节水"]):
+            return "irrigation"
+        return "crop"
+    if any(k in text for k in ["灌溉", "水肥", "墒情", "水层", "节水", "灌水"]):
         return "irrigation"
-    if any(keyword in text for keyword in ["温室", "设备", "传感器", "农机"]):
+    if any(k in text for k in ["温室", "传感器", "农机", "设备", "烘干"]):
         return "device"
-    if any(keyword in text for keyword in ["种植", "栽培", "田间管理"]):
+    if any(k in text for k in ["湿度", "大气湿度"]) and "土壤" not in text:
+        return "humidity"
+    if any(k in text for k in ["病虫害", "防治", "农药", "疫病", "虫害"]):
+        return "warning"
+    if any(k in text for k in ["种植", "栽培", "田间管理", "施肥", "品种"]):
         return "crop"
     return source.topic

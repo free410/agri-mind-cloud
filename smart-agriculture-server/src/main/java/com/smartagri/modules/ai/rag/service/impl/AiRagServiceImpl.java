@@ -31,6 +31,7 @@ import com.smartagri.modules.warning.mapper.WarningMapper;
 import com.smartagri.modules.warning.mapper.WarningProcessLogMapper;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
+import lombok.extern.slf4j.Slf4j;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -43,6 +44,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 
+@Slf4j
 @Service
 public class AiRagServiceImpl implements AiRagService {
 
@@ -84,31 +86,61 @@ public class AiRagServiceImpl implements AiRagService {
     @Override
     public RagChatResponse chat(RagChatRequest request) {
         Map<String, Object> businessContext = buildBusinessContext(request);
+        KnowledgeGraphRagSnippet kgSnippet = knowledgeGraphRagContextProvider.build(request.getQuery());
+
         if (!ragProperties.isEnabled()) {
-            return buildFallbackResponse(request, businessContext, "RAG 服务已禁用，已使用本地兜底结果");
+            log.info("RAG服务已禁用，使用本地兜底");
+            return buildFallbackResponse(request, businessContext, "RAG 服务已禁用，已使用本地兜底结果", kgSnippet.citations());
         }
 
         try {
-            KnowledgeGraphRagSnippet kgSnippet = knowledgeGraphRagContextProvider.build(request.getQuery());
-            RagAnswerClientRequest.RagAnswerClientRequestBuilder req = RagAnswerClientRequest.builder()
+            List<Map<String, Object>> citedKgData = buildCitedKnowledgeGraph(kgSnippet.citations());
+
+            RagAnswerClientRequest req = RagAnswerClientRequest.builder()
                     .query(request.getQuery())
                     .mode(StringUtils.defaultIfBlank(request.getMode(), "auto"))
                     .businessContext(businessContext)
                     .relatedWarningId(request.getRelatedWarningId())
                     .relatedDeviceId(request.getRelatedDeviceId())
                     .relatedFarmlandId(request.getRelatedFarmlandId())
-                    .topK(request.getTopK() == null ? ragProperties.getDefaultTopK() : request.getTopK());
+                    .topK(request.getTopK() == null ? ragProperties.getDefaultTopK() : request.getTopK())
+                    .citedKnowledgeGraph(citedKgData)
+                    .build();
             if (StringUtils.isNotBlank(kgSnippet.contextText())) {
-                req.knowledgeGraphContext(kgSnippet.contextText());
+                req.setKnowledgeGraphContext(kgSnippet.contextText());
             }
-            RagAnswerClientResponse response = ragClient.answer(req.build());
+
+            RagAnswerClientResponse response = ragClient.answer(req);
             return mapResponse(response, kgSnippet.citations());
         } catch (Exception exception) {
+            log.warn("RAG 调用失败: {}", exception.getMessage());
             if (!ragProperties.isFallbackEnabled()) {
                 throw exception;
             }
-            return buildFallbackResponse(request, businessContext, exception.getMessage());
+            return buildFallbackResponse(request, businessContext, exception.getMessage(), kgSnippet.citations());
         }
+    }
+
+    /**
+     * 将图谱引用列表转换为前端需要的格式，包含 subgraph 数据用于迷你图谱可视化。
+     * 字段名与前端期望一致: id, title, kind, subgraph
+     */
+    private List<Map<String, Object>> buildCitedKnowledgeGraph(List<RagGraphCitationVO> citations) {
+        if (citations == null || citations.isEmpty()) {
+            return null;
+        }
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (RagGraphCitationVO c : citations) {
+            Map<String, Object> item = new LinkedHashMap<>();
+            item.put("id", c.getId());
+            item.put("title", c.getTitle());
+            item.put("kind", c.getKind());
+            if (c.getSubgraph() != null) {
+                item.put("subgraph", c.getSubgraph());
+            }
+            result.add(item);
+        }
+        return result;
     }
 
     private RagChatResponse mapResponse(RagAnswerClientResponse response, List<RagGraphCitationVO> citedKnowledgeGraph) {
@@ -125,18 +157,47 @@ public class AiRagServiceImpl implements AiRagService {
                     .build();
         }
 
+        log.info("mapResponse: FastAPI返回的citedKnowledgeSources数量={}",
+            response.getCitedKnowledgeSources() != null ? response.getCitedKnowledgeSources().size() : 0);
+        if (response.getCitedKnowledgeSources() != null && !response.getCitedKnowledgeSources().isEmpty()) {
+            log.info("mapResponse: 第一条知识来源原始score={}, 类型={}",
+                response.getCitedKnowledgeSources().get(0).getScore(),
+                response.getCitedKnowledgeSources().get(0).getScore() != null ?
+                    response.getCitedKnowledgeSources().get(0).getScore().getClass().getSimpleName() : "null");
+        }
+
         List<RagKnowledgeCitationVO> knowledgeSources = response.getCitedKnowledgeSources() == null
                 ? List.of()
                 : response.getCitedKnowledgeSources().stream()
-                .map(item -> RagKnowledgeCitationVO.builder()
-                        .id(item.getId())
-                        .title(item.getTitle())
-                        .source(item.getSource())
-                        .score(item.getScore())
-                        .topic(item.getTopic())
-                        .build())
+                .map(item -> {
+                    Double score = item.getScore();
+                    log.info("mapResponse: 转换前score={}, 转换后score={}", score, score);
+                    return RagKnowledgeCitationVO.builder()
+                            .id(item.getId())
+                            .title(item.getTitle())
+                            .source(item.getSource())
+                            .score(score)
+                            .topic(item.getTopic())
+                            .content(item.getContent())
+                            .rerankScore(item.getRerankScore())
+                            .domain(item.getDomain())
+                            .metadata(item.getMetadata())
+                            .build();
+                })
                 .toList();
 
+        // 优先使用 FastAPI 返回的图谱引用（含 subgraph）；兜底使用本地检索结果
+        List<RagGraphCitationVO> graphCitations = convertResponseKgToCitations(
+                response.getCitedKnowledgeGraph(), citedKnowledgeGraph);
+
+        log.info("mapResponse: FastAPI返回的citedKnowledgeGraph数量={}, 转换后graphCitations数量={}",
+            response.getCitedKnowledgeGraph() != null ? response.getCitedKnowledgeGraph().size() : 0,
+            graphCitations.size());
+        if (graphCitations.isEmpty() && citedKnowledgeGraph != null && !citedKnowledgeGraph.isEmpty()) {
+            log.info("mapResponse: FastAPI返回为空，使用fallback数据");
+        }
+
+        String fallbackReason = response.getFallbackReason();
         return RagChatResponse.builder()
                 .sessionId(StringUtils.defaultIfBlank(response.getSessionId(), "rag-" + UUID.randomUUID()))
                 .mode(response.getMode())
@@ -149,18 +210,51 @@ public class AiRagServiceImpl implements AiRagService {
                 .shouldManualReview(Boolean.TRUE.equals(response.getShouldManualReview()))
                 .citedBusinessContext(businessCitation)
                 .citedKnowledgeSources(knowledgeSources)
-                .citedKnowledgeGraph(citedKnowledgeGraph == null ? List.of() : citedKnowledgeGraph)
-                .fallback(false)
-                .fallbackReason(null)
+                .citedKnowledgeGraph(graphCitations)
+                .fallback(StringUtils.isNotBlank(fallbackReason))
+                .fallbackReason(fallbackReason)
                 .build();
+    }
+
+    /**
+     * 将 FastAPI 返回的图谱引用（含 subgraph）转换为前端 VO 列表。
+     * 如果 FastAPI 返回空，则降级使用本地 kgSnippet.citations()。
+     */
+    @SuppressWarnings("unchecked")
+    private List<RagGraphCitationVO> convertResponseKgToCitations(
+            List<Map<String, Object>> responseKg,
+            List<RagGraphCitationVO> fallback) {
+        if (responseKg != null && !responseKg.isEmpty()) {
+            return responseKg.stream().map(item -> {
+                Object subgraphRaw = item.get("subgraph");
+                Map<String, Object> subgraph = null;
+                if (subgraphRaw instanceof Map<?, ?>) {
+                    subgraph = (Map<String, Object>) subgraphRaw;
+                }
+                return RagGraphCitationVO.builder()
+                        .id(String.valueOf(item.getOrDefault("id", "")))
+                        .title(String.valueOf(item.getOrDefault("title", "")))
+                        .kind(String.valueOf(item.getOrDefault("kind", "concept")))
+                        .subgraph(subgraph)
+                        .build();
+            }).toList();
+        }
+
+        if (fallback != null && !fallback.isEmpty()) {
+            return new ArrayList<>(fallback);
+        }
+
+        return new ArrayList<>();
     }
 
     private RagChatResponse buildFallbackResponse(RagChatRequest request,
                                                   Map<String, Object> businessContext,
-                                                  String reason) {
-        Map<String, Object> currentWarning = castMap(businessContext.get("current_warning"));
-        List<String> summaryBlocks = extractStringList(businessContext.get("summary_blocks"));
-        List<String> riskSignals = extractStringList(businessContext.get("risk_signals"));
+                                                  String reason,
+                                                  List<RagGraphCitationVO> citedKnowledgeGraph) {
+        Map<String, Object> ctx = businessContext == null ? Map.of() : businessContext;
+        Map<String, Object> currentWarning = castMap(ctx.get("current_warning"));
+        List<String> summaryBlocks = extractStringList(ctx.get("summary_blocks"));
+        List<String> riskSignals = extractStringList(ctx.get("risk_signals"));
 
         String warningType = currentWarning == null ? null : stringValue(currentWarning.get("warning_type"));
         String conclusion = StringUtils.isNotBlank(warningType)
@@ -201,7 +295,7 @@ public class AiRagServiceImpl implements AiRagService {
                 .shouldManualReview(Boolean.TRUE)
                 .citedBusinessContext(businessCitation)
                 .citedKnowledgeSources(List.of())
-                .citedKnowledgeGraph(List.of())
+                .citedKnowledgeGraph(citedKnowledgeGraph == null ? List.of() : citedKnowledgeGraph)
                 .fallback(true)
                 .fallbackReason(reason)
                 .build();
@@ -235,6 +329,10 @@ public class AiRagServiceImpl implements AiRagService {
     }
 
     private Map<String, Object> buildBusinessContext(RagChatRequest request) {
+        // 纯知识问答：前端不传关联预警/设备/农田时，不再用「库中最新预警」填充，避免答非所问
+        if (isKnowledgeWithoutPinnedContext(request)) {
+            return null;
+        }
         Map<String, Object> context = new LinkedHashMap<>();
         WarningRecord currentWarning = resolveCurrentWarning(request);
         Long farmlandId = resolveFarmlandId(request, currentWarning);
@@ -252,6 +350,18 @@ public class AiRagServiceImpl implements AiRagService {
         context.put("summary_blocks", buildSummaryBlocks(context));
         context.put("risk_signals", buildRiskSignals(context));
         return context;
+    }
+
+    /**
+     * 知识模式且未显式指定业务锚点时，不向 RAG 注入业务快照（否则易套用无关 DEVICE_OFFLINE 等记录）。
+     */
+    private boolean isKnowledgeWithoutPinnedContext(RagChatRequest request) {
+        if (!"knowledge".equalsIgnoreCase(StringUtils.defaultString(request.getMode()))) {
+            return false;
+        }
+        return request.getRelatedWarningId() == null
+                && request.getRelatedDeviceId() == null
+                && request.getRelatedFarmlandId() == null;
     }
 
     private WarningRecord resolveCurrentWarning(RagChatRequest request) {

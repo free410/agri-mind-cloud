@@ -26,11 +26,17 @@ class KnowledgeIndexService:
         recreate_collection: bool = False,
         dry_run: bool = False,
         include_cleaned_jsonl: bool = True,
+        cleaned_jsonl_dir: str | Path | None = None,
     ) -> KnowledgeIndexStats:
         target_dir = Path(root_dir or settings.knowledge_root_dir)
         documents = self.loader.load_documents(target_dir)
         if include_cleaned_jsonl:
-            cleaned_dir = settings._resolve_path(settings.crawl_data_root_dir) / "cleaned"
+            if cleaned_jsonl_dir is not None:
+                cleaned_dir = Path(cleaned_jsonl_dir)
+                if not cleaned_dir.is_absolute():
+                    cleaned_dir = settings.project_root / cleaned_dir
+            else:
+                cleaned_dir = settings._resolve_path(settings.crawl_data_root_dir) / "cleaned"
             documents.extend(self.loader.load_cleaned_jsonl_dir(cleaned_dir))
         chunks = self.chunker.chunk_documents(
             documents,

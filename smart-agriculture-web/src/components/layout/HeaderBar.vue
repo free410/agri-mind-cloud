@@ -10,12 +10,12 @@
     <div class="header-right">
       <div class="status-pill">
         <span class="dot"></span>
-        <span>比赛演示模式</span>
+        <span>系统在线</span>
       </div>
 
       <div class="status-pill subtle">
         <span class="dot neutral"></span>
-        <span>本地环境</span>
+        <span>{{ envText }}</span>
       </div>
 
       <el-dropdown @command="handleCommand">
@@ -23,7 +23,7 @@
           <div class="avatar">{{ avatarText }}</div>
           <div class="user-meta">
             <strong>{{ displayName }}</strong>
-            <span>系统管理员</span>
+            <span>{{ roleText }}</span>
           </div>
           <el-icon class="user-arrow"><ArrowDown /></el-icon>
         </div>
@@ -57,6 +57,8 @@ const currentDateText = computed(() => {
 
 const displayName = computed(() => userStore.userInfo?.nickname || userStore.userInfo?.username || '管理员')
 const avatarText = computed(() => displayName.value.slice(0, 1))
+const roleText = computed(() => userStore.userInfo?.roleName || userStore.userInfo?.role || '管理员')
+const envText = computed(() => (import.meta.env.DEV ? '开发环境' : '生产环境'))
 
 async function handleCommand(command) {
   if (command === 'profile') {
@@ -65,11 +67,16 @@ async function handleCommand(command) {
   }
 
   if (command === 'logout') {
-    await ElMessageBox.confirm('确认退出当前登录状态吗？', '退出提示', {
-      type: 'warning'
-    })
+    try {
+      await ElMessageBox.confirm('确认退出当前登录状态吗？', '退出提示', {
+        type: 'warning'
+      })
+    } catch {
+      return
+    }
     await userStore.logout()
-    router.push('/login')
+    // 使用 window.location.href 强制整页跳转，清除所有 SPA 缓存状态
+    window.location.href = '/login'
   }
 }
 </script>

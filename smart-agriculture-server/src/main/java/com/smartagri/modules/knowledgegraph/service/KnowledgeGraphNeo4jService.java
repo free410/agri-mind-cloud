@@ -34,6 +34,8 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * 直连 Neo4j，不经过 FastAPI，避免本机 9001 上残留旧 Python 进程导致图谱不可用。
@@ -52,6 +54,22 @@ public class KnowledgeGraphNeo4jService {
     private static final String SEED_RESOURCE = "/knowledge-graph/agri-graph-seed.json";
 
     private static final String ENTITY_ENRICH_RESOURCE = "/knowledge-graph/agri-graph-entities.json";
+
+    private static final List<String> STOP_WORDS = List.of(
+            "的", "了", "是", "在", "和", "与", "或", "及", "等", "对", "有", "为",
+            "我", "你", "他", "她", "它", "们", "这", "那", "个", "一", "上", "下",
+            "中", "来", "去", "到", "从", "被", "把", "让", "用", "以", "但", "而",
+            "吗", "呢", "吧", "啊", "哦", "呀", "哪", "什么", "怎么", "如何",
+            "可以", "能够", "应该", "必须", "需要", "要", "不", "没", "请", "您",
+            "做", "进行", "发生", "通过", "根据", "按照", "关于", "对于", "由于",
+            "还是", "或者", "以及", "并", "且", "只", "仅", "都", "也", "已", "就",
+            "会", "能", "将", "给", "向", "比", "如", "当", "于", "其"
+    );
+
+    private static final Pattern CN_WORD_PATTERN = Pattern.compile(
+            "[\u4e00-\u9fff]{2,}"
+                    + "|[a-zA-Z0-9]{3,}"
+    );
 
     private static final List<AgriGraphSeedTriple> FALLBACK_SEED = List.of(
             new AgriGraphSeedTriple("stress_soil_moisture_low", "土壤湿度偏低", "stress",
@@ -191,14 +209,31 @@ public class KnowledgeGraphNeo4jService {
         int lim = Math.min(Math.max(limit, 1), 100);
         try (Session session = openSession()) {
             ensureSchema(session);
+
+            // 中文分词 + 多关键词匹配：按命中数降序
+            List<String> keywords = extractKeywords(q.trim());
+            if (keywords.isEmpty()) {
+                keywords = List.of(q.trim());
+            }
+            String keywordsParam = String.join(" ", keywords);
+
             var result = session.run(
                     """
                             MATCH (e:AgriEntity)
-                            WHERE toLower(e.name) CONTAINS toLower($q) OR e.id CONTAINS $q
+                            WHERE any(k IN split($keywords, ' ')
+                                       WHERE toLower(e.name) CONTAINS toLower(k)
+                                          OR e.id CONTAINS k
+                            )
+                            WITH e,
+                                 size([k IN split($keywords, ' ')
+                                       WHERE toLower(e.name) CONTAINS toLower(k)] +
+                                      [k IN split($keywords, ' ')
+                                       WHERE e.id CONTAINS k]) AS hitCount
                             RETURN e.id AS id, e.name AS name, e.kind AS kind
+                            ORDER BY hitCount DESC
                             LIMIT $lim
                             """,
-                    Values.parameters("q", q.trim(), "lim", lim)
+                    Values.parameters("keywords", keywordsParam, "lim", lim)
             );
             while (result.hasNext()) {
                 Record row = result.next();
@@ -212,6 +247,52 @@ public class KnowledgeGraphNeo4jService {
             }
             return arr;
         }
+    }
+
+    private List<String> extractKeywords(String text) {
+        List<String> keywords = new ArrayList<>();
+        int n = text.length();
+        for (int i = 0; i < n; i++) {
+            // 跳过非汉字
+            if (!isChinese(text.charAt(i))) continue;
+            // 找连续汉字片段
+            int j = i;
+            StringBuilder segment = new StringBuilder();
+            while (j < n && isChinese(text.charAt(j))) {
+                segment.append(text.charAt(j));
+                j++;
+            }
+            String seg = segment.toString();
+            // 片段内：滑动窗口提取 2~4 字词元
+            if (seg.length() <= 8) {
+                for (int start = 0; start < seg.length(); start++) {
+                    for (int len = 2; len <= 4; len++) {
+                        if (start + len <= seg.length()) {
+                            String kw = seg.substring(start, start + len);
+                            if (!STOP_WORDS.contains(kw)) {
+                                keywords.add(kw);
+                            }
+                        }
+                    }
+                }
+            } else {
+                // 片段过长时用滑动窗口避免组合爆炸
+                for (int start = 0; start + 2 <= seg.length(); start++) {
+                    for (int len = 2; len <= 4 && start + len <= seg.length(); len++) {
+                        String kw = seg.substring(start, start + len);
+                        if (!STOP_WORDS.contains(kw)) {
+                            keywords.add(kw);
+                        }
+                    }
+                }
+            }
+            i = j - 1;
+        }
+        return keywords;
+    }
+
+    private static boolean isChinese(char c) {
+        return c >= 0x4e00 && c <= 0x9fff;
     }
 
     public JsonNode subgraph(String centerId, int depth) {
@@ -404,7 +485,7 @@ public class KnowledgeGraphNeo4jService {
             Record deg = session.run(
                     """
                             MATCH (n:AgriEntity {id:$id})
-                            RETURN size((n)-[:RELATES]->()) AS dout, size((n)<-[:RELATES]-()) AS din
+                            RETURN COUNT {(n)-[:RELATES]->()} AS dout, COUNT {(n)<-[:RELATES]-()} AS din
                             """,
                     Values.parameters("id", id)
             ).single();

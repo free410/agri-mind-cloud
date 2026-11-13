@@ -118,7 +118,11 @@ class KnowledgeCrawlService:
             list_page_url = str(list_page)
             if not await http_client.can_fetch(list_page_url):
                 continue
-            result = await http_client.fetch_text(list_page_url)
+            try:
+                result = await http_client.fetch_text(list_page_url)
+            except Exception:
+                summary.error_count += 1
+                continue
             summary.list_page_count += 1
             extracted_links = self.link_extractor.extract_article_links(result.text, list_page_url, source)
             for link in extracted_links:

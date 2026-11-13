@@ -3,7 +3,6 @@
     <section class="page-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">农田空间管理</span>
-        <h1 class="page-banner__title">农田管理</h1>
         <p class="page-banner__desc">统一查看地块面积、位置、土壤类型与种植状态。</p>
       </div>
 
@@ -840,13 +839,13 @@ onMounted(() => {
   justify-content: flex-end;
 }
 
-@media (max-width: 1200px) {
+@container app-content (max-width: 920px) {
   .card-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 768px) {
+@container app-content (max-width: 700px) {
   .card-grid,
   .detail-grid {
     grid-template-columns: 1fr;

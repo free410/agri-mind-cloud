@@ -4,13 +4,16 @@ from typing import Any
 
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import ValidationError
+from starlette.concurrency import run_in_threadpool
 
 from app.api.rag_java_body import normalize_rag_answer_body
 from app.core.response import success
 from app.schemas.rag import (
     RagAnswerRequest,
+    RagAnswerResponse,
     RagBriefingRequest,
-    RagSearchRequest
+    RagSearchRequest,
+    UserFeedbackRequest,
 )
 from app.services.rag_service import rag_service
 
@@ -45,9 +48,10 @@ async def rag_answer(http_request: Request):
     try:
         rag_req = RagAnswerRequest.model_validate(normalize_rag_answer_body(payload))
     except ValidationError as exc:
-        logger.warning("rag/answer 字段校验失败: %s body_preview=%s", exc.errors(), str(payload)[:500])
+        logger.warning("rag/answer 字段校验失败: %s", exc.errors())
         raise HTTPException(status_code=422, detail=exc.errors()) from exc
-    result = rag_service.answer(rag_req)
+    # RAG 内部使用同步 httpx / 同步向量检索，放到线程池避免阻塞事件循环
+    result = await run_in_threadpool(rag_service.answer, rag_req)
     return success(data=result.model_dump())
 
 
@@ -56,3 +60,21 @@ def rag_briefing(request: RagBriefingRequest):
     result = rag_service.briefing(request)
     return success(data=result.model_dump())
 
+
+@router.post("/feedback")
+def rag_feedback(request: UserFeedbackRequest):
+    """
+    用户反馈接口：用于「有用/无用」反馈埋点，支持迭代优化检索质量。
+
+    请求示例：
+    {
+        "session_id": "rag-abc123",
+        "question": "黄瓜叶子发黄有斑点是什么病？",
+        "answer_id": "optional-answer-id",
+        "is_helpful": true,
+        "feedback_text": "回答很专业，但缺少具体用药建议",
+        "retrieved_refs": ["chunk-001", "chunk-002"]
+    }
+    """
+    result = rag_service.submit_feedback(request)
+    return success(data=result.model_dump())

@@ -10,12 +10,16 @@ server:
 spring:
   application:
     name: 智慧农业管理系统后端
+  servlet:
+    multipart:
+      max-file-size: 20MB
+      max-request-size: 30MB
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/smart_agriculture?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+    url: jdbc:mysql://${MYSQL_HOST:localhost}:${MYSQL_PORT:3306}/${MYSQL_DATABASE:smart_agriculture}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
     username: ${MYSQL_USERNAME:root}
-    # 勿在仓库中写真实密码；本地用环境变量 MYSQL_PASSWORD 或 application-local.yml（已 gitignore）
-    password: ${MYSQL_PASSWORD:}
+    # 本地请通过 MYSQL_PASSWORD 注入真实口令；不要在仓库明文保存数据库密码
+    password: ${MYSQL_PASSWORD:1234}
   jackson:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: Asia/Shanghai
@@ -25,22 +29,32 @@ mybatis-plus:
   type-aliases-package: com.smartagri.modules.*.entity
   configuration:
     map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   global-config:
     db-config:
       id-type: assign_id
 
 springdoc:
   api-docs:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
     path: /v3/api-docs
   swagger-ui:
-    enabled: true
+    enabled: ${SWAGGER_ENABLED:false}
     path: /swagger-ui.html
     tags-sorter: alpha
     operations-sorter: alpha
 
 smart-agri:
+  warning:
+    # 生产环境建议关闭启动时自动 DDL，改由 SQL 迁移脚本执行
+    auto-migrate-closure-schema: ${WARNING_AUTO_MIGRATE:false}
+    rule:
+      soil-moisture-low-threshold: ${SMART_AGRI_RULE_SOIL_MOISTURE_LOW:30}
+      temperature-high-threshold: ${SMART_AGRI_RULE_TEMPERATURE_HIGH:32}
+      temperature-low-threshold: ${SMART_AGRI_RULE_TEMPERATURE_LOW:10}
+      light-low-threshold: ${SMART_AGRI_RULE_LIGHT_LOW:5000}
+      light-high-threshold: ${SMART_AGRI_RULE_LIGHT_HIGH:50000}
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:5173,http://localhost:8088}
   jwt:
     # 勿提交真实密钥；生产必须通过环境变量 JWT_SECRET_KEY 注入
     secret-key: ${JWT_SECRET_KEY:}
@@ -63,20 +77,12 @@ smart-agri:
     model-name: ${SMART_AGRI_AI_MODEL:qwen3.5-flash}
     fallback-to-mock: ${SMART_AGRI_AI_FALLBACK_TO_MOCK:false}
     base-url: ${SMART_AGRI_AI_BASE_URL:https://dashscope.aliyuncs.com/compatible-mode/v1}
-    api-key: ${SMART_AGRI_AI_API_KEY:}
+    api-key: ${SMART_AGRI_AI_API_KEY:${OPENAI_API_KEY:}}
     chat-path: ${SMART_AGRI_AI_CHAT_PATH:/chat/completions}
     temperature: ${SMART_AGRI_AI_TEMPERATURE:0.4}
     max-tokens: ${SMART_AGRI_AI_MAX_TOKENS:1200}
     connect-timeout-seconds: ${SMART_AGRI_AI_CONNECT_TIMEOUT:10}
     read-timeout-seconds: ${SMART_AGRI_AI_READ_TIMEOUT:60}
-  warning:
-    auto-migrate-closure-schema: true
-    rule:
-      soil-moisture-low-threshold: ${SMART_AGRI_RULE_SOIL_MOISTURE_LOW:30}
-      temperature-high-threshold: ${SMART_AGRI_RULE_TEMPERATURE_HIGH:32}
-      temperature-low-threshold: ${SMART_AGRI_RULE_TEMPERATURE_LOW:10}
-      light-low-threshold: ${SMART_AGRI_RULE_LIGHT_LOW:5000}
-      light-high-threshold: ${SMART_AGRI_RULE_LIGHT_HIGH:50000}
   inspection:
     enabled: ${SMART_AGRI_INSPECTION_ENABLED:true}
     initial-delay-ms: ${SMART_AGRI_INSPECTION_INITIAL_DELAY_MS:15000}
@@ -101,8 +107,8 @@ smart-agri:
     read-timeout-seconds: ${SMART_AGRI_KG_READ_TIMEOUT:60}
     neo4j-uri: ${SMART_AGRI_NEO4J_URI:bolt://localhost:7687}
     neo4j-user: ${SMART_AGRI_NEO4J_USER:neo4j}
-    # 与 Neo4j / docker-compose 一致；勿在仓库写生产口令，用环境变量注入
-    neo4j-password: ${SMART_AGRI_NEO4J_PASSWORD:}
+    # 生产务必通过 SMART_AGRI_NEO4J_PASSWORD 或 NEO4J_PASSWORD 注入
+    neo4j-password: ${SMART_AGRI_NEO4J_PASSWORD:${NEO4J_PASSWORD:}}
     neo4j-database: ${SMART_AGRI_NEO4J_DATABASE:}
     neo4j-max-subgraph-paths: ${SMART_AGRI_NEO4J_MAX_PATHS:400}
     pipeline-ingest-key: ${SMART_AGRI_KG_PIPELINE_KEY:}

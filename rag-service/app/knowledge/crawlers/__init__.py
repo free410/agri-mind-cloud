@@ -1,1 +1,1 @@
-"""Public agriculture knowledge crawlers."""
+"""HTTP 客户端模块，负责发送 HTTP 请求获取网页内容。"""

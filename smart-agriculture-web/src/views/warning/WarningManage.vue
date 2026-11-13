@@ -3,7 +3,6 @@
     <section class="page-banner warning-center-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">智能预警闭环中心</span>
-        <h1 class="page-banner__title">预警管理工作台</h1>
         <p class="page-banner__desc">覆盖预警发现、AI 研判、处置建议、状态流转与闭环结果展示。</p>
       </div>
       <div class="page-banner__actions">
@@ -377,7 +376,8 @@
               </div>
               <el-form :model="actionForm" label-width="88px" class="action-form">
                 <el-form-item label="操作人">
-                  <el-input v-model="actionForm.operatorName" maxlength="64" />
+                  <el-input v-model="actionForm.operatorName" disabled />
+                  <div class="form-hint">操作人由当前登录账号自动记录，不可更改</div>
                 </el-form-item>
                 <el-form-item label="处理说明">
                   <el-input
@@ -575,6 +575,9 @@ import {
   warningLevelOptions,
   warningStatusOptions
 } from '@/utils/agriDisplay'
+import { useUserStore } from '@/stores/user'
+
+const userStore = useUserStore()
 
 const listLoading = ref(false)
 const detailLoading = ref(false)
@@ -676,7 +679,7 @@ const reportData = reactive({
 })
 
 const actionForm = reactive({
-  operatorName: '系统管理员',
+  operatorName: userStore.userInfo?.nickname || userStore.userInfo?.username || '管理员',
   note: ''
 })
 
@@ -1216,13 +1219,6 @@ function resetReportState() {
 </script>
 
 <style scoped lang="scss">
-.warning-center-banner {
-  background:
-    radial-gradient(circle at right top, rgba(245, 158, 11, 0.12), transparent 24%),
-    radial-gradient(circle at left center, rgba(34, 197, 94, 0.12), transparent 30%),
-    var(--app-hero-gradient-warn);
-}
-
 .warning-overview-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
@@ -1238,30 +1234,29 @@ function resetReportState() {
 .warning-layout__right {
   display: grid;
   gap: 16px;
-  min-height: 100%;
 }
 
 .warning-layout__left {
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr auto;
 }
 
 .warning-layout__right {
-  grid-template-rows: minmax(0, 1fr);
+  grid-template-rows: 1fr;
 }
 
 .warning-list-card {
-  min-height: 560px;
+  display: flex;
+  flex-direction: column;
 }
 
 .warning-list-card :deep(.el-card__body) {
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  flex: 1;
 }
 
 .warning-list-card .page-table-shell {
   flex: 1;
-  min-height: 390px;
 }
 
 .warning-list-card :deep(.el-table) {
@@ -1762,13 +1757,13 @@ function resetReportState() {
   padding-top: 8px;
 }
 
-@media (max-width: 1650px) {
+@container app-content (max-width: 1160px) {
   .warning-overview-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1360px) {
+@container app-content (max-width: 1000px) {
   .warning-layout {
     grid-template-columns: 1fr;
   }
@@ -1791,7 +1786,7 @@ function resetReportState() {
   }
 }
 
-@media (max-width: 1024px) {
+@container app-content (max-width: 760px) {
   .warning-overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -1812,5 +1807,12 @@ function resetReportState() {
     grid-template-columns: 1fr;
     display: grid;
   }
+}
+
+.form-hint {
+  margin-top: 4px;
+  color: var(--el-text-color-secondary);
+  font-size: 12px;
+  line-height: 1.4;
 }
 </style>

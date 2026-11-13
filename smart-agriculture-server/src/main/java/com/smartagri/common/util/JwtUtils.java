@@ -3,7 +3,6 @@ package com.smartagri.common.util;
 import com.smartagri.common.properties.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Component;
@@ -19,10 +18,19 @@ import java.util.Map;
 @Component
 public class JwtUtils {
 
+    private static final int MIN_SECRET_BYTES = 32;
+
     private final JwtProperties jwtProperties;
+    private final SecretKey secretKey;
 
     public JwtUtils(JwtProperties jwtProperties) {
         this.jwtProperties = jwtProperties;
+        byte[] keyBytes = StringUtils.trimToEmpty(jwtProperties.getSecretKey()).getBytes(StandardCharsets.UTF_8);
+        if (keyBytes.length < MIN_SECRET_BYTES) {
+            throw new IllegalStateException(
+                    "JWT_SECRET_KEY 未配置或长度不足 32 字节，请通过环境变量注入至少 32 字节的随机密钥");
+        }
+        this.secretKey = Keys.hmacShaKeyFor(keyBytes);
     }
 
     public String generateToken(Long adminId, String username) {
@@ -37,13 +45,13 @@ public class JwtUtils {
                 .issuer(jwtProperties.getIssuer())
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(now.plus(jwtProperties.getExpireHours(), ChronoUnit.HOURS)))
-                .signWith(buildSecretKey())
+                .signWith(secretKey)
                 .compact();
     }
 
     public Claims parseToken(String token) {
         return Jwts.parser()
-                .verifyWith(buildSecretKey())
+                .verifyWith(secretKey)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
@@ -68,13 +76,5 @@ public class JwtUtils {
             return authorizationHeader.substring(prefix.length());
         }
         return authorizationHeader;
-    }
-
-    private SecretKey buildSecretKey() {
-        byte[] keyBytes = jwtProperties.getSecretKey().getBytes(StandardCharsets.UTF_8);
-        if (keyBytes.length >= 32) {
-            return Keys.hmacShaKeyFor(keyBytes);
-        }
-        return Keys.hmacShaKeyFor(Decoders.BASE64.decode("c21hcnQtYWdyaWN1bHR1cmUtZGVtby1zZWNyZXQta2V5LTEyMzQ1Njc4OTA="));
     }
 }

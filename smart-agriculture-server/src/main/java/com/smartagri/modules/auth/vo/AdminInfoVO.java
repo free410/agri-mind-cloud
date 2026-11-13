@@ -1,5 +1,7 @@
 package com.smartagri.modules.auth.vo;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -9,6 +11,7 @@ import java.time.LocalDateTime;
 @Data
 @Builder
 @Schema(description = "当前管理员信息")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class AdminInfoVO {
 
     @Schema(description = "管理员ID")

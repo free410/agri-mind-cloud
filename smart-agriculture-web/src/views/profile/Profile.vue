@@ -3,7 +3,6 @@
     <section class="page-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">系统管理</span>
-        <h1 class="page-banner__title">个人中心</h1>
         <p class="page-banner__desc">
           统一查看管理员基础资料、账号状态与最近登录信息，并在当前页面直接完成密码维护。
         </p>
@@ -434,14 +433,14 @@ function handleReset() {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-@media (max-width: 1100px) {
+@container app-content (max-width: 860px) {
   .profile-main-grid,
   .profile-summary-grid {
     grid-template-columns: 1fr;
   }
 }
 
-@media (max-width: 768px) {
+@container app-content (max-width: 700px) {
   .profile-identity,
   .password-tip-item {
     flex-direction: column;

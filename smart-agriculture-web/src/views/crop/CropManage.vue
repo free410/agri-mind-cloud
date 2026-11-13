@@ -3,7 +3,6 @@
     <section class="page-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">作物生命周期管理</span>
-        <h1 class="page-banner__title">作物管理</h1>
         <p class="page-banner__desc">聚焦作物阶段与健康状态，支撑种植过程精细化管理。</p>
       </div>
 
@@ -738,7 +737,7 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-@media (max-width: 980px) {
+@container app-content (max-width: 800px) {
   .detail-grid,
   .detail-meta {
     grid-template-columns: 1fr;

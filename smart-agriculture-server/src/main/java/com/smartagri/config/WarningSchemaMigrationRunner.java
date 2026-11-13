@@ -20,7 +20,7 @@ public class WarningSchemaMigrationRunner implements ApplicationRunner {
 
     private final JdbcTemplate jdbcTemplate;
 
-    @Value("${smart-agri.warning.auto-migrate-closure-schema:true}")
+    @Value("${smart-agri.warning.auto-migrate-closure-schema:false}")
     private boolean autoMigrateClosureSchema;
 
     public WarningSchemaMigrationRunner(JdbcTemplate jdbcTemplate) {

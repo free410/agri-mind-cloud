@@ -5,7 +5,9 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Data
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -39,6 +41,19 @@ public class RagAnswerClientResponse {
 
     @JsonProperty("cited_knowledge_sources")
     private List<CitedKnowledgeSource> citedKnowledgeSources = new ArrayList<>();
+
+    /**
+     * 知识图谱引用列表（含 subgraph 数据，用于前端迷你图谱可视化）。
+     * 来自 FastAPI RagAnswerResponse.cited_knowledge_graph。
+     */
+    @JsonProperty("cited_knowledge_graph")
+    private List<Map<String, Object>> citedKnowledgeGraph = new ArrayList<>();
+
+    /**
+     * LLM 兜底原因，来自 FastAPI 响应。
+     */
+    @JsonProperty("fallback_reason")
+    private String fallbackReason;
 
     @Data
     @JsonIgnoreProperties(ignoreUnknown = true)
@@ -81,5 +96,26 @@ public class RagAnswerClientResponse {
         private Double score;
 
         private String topic;
+
+        /**
+         * 知识块完整内容（FastAPI 新增）
+         */
+        private String content;
+
+        /**
+         * 重排分数（FastAPI 新增）
+         */
+        @JsonProperty("rerank_score")
+        private Double rerankScore;
+
+        /**
+         * 知识领域标记（FastAPI 新增）
+         */
+        private String domain;
+
+        /**
+         * 元数据对象（FastAPI 新增）
+         */
+        private Map<String, Object> metadata;
     }
 }

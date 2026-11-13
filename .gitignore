@@ -54,3 +54,9 @@ venv/
 **/.env.local
 **/.env.*.local
 
+# 本地部署口令/密钥文件（含真实密码、JWT、API Key，勿入库）
+/stack.env
+/update_password.sql
+/gen_bcrypt.py
+/gen_bcrypt2a.py
+

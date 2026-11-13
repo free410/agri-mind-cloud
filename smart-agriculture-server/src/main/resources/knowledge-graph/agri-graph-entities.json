@@ -570,5 +570,45 @@
   "sym_mold": {
     "description": "霉层为田间可观察的症状表型，可用于辅助推断缺素或病害方向（须结合检测）。",
     "aliases": []
+  },
+  "stage_tillering": {
+    "description": "分蘖期是水稻生长周期中决定有效穗数的关键时期，需精细水层管理促进低位分蘖发生。",
+    "aliases": ["分蘖阶段", "蘖期"]
+  },
+  "prac_shallow_irrigation": {
+    "description": "浅水勤灌是分蘖期推荐的水层管理方式，水层深度控制在3-5厘米，促进根系发育与低位分蘖。",
+    "aliases": ["浅灌", "薄水灌溉"]
+  },
+  "stress_water_depth_deep": {
+    "description": "水层过深会抑制水稻根系呼吸，导致根系活力下降、分蘖停滞，增加无效分蘖比例。",
+    "aliases": ["深水", "淹水过深"]
+  },
+  "stress_root_hypoxia": {
+    "description": "根系缺氧是分蘖期常见胁迫，与水层过深、土壤板结等因素相关，影响养分吸收。",
+    "aliases": ["根系窒息", "根缺氧"]
+  },
+  "sym_yellow_seedling": {
+    "description": "黄化僵苗表现为叶片褪绿、分蘖停滞，需排查水层、养分、病虫害等因素。",
+    "aliases": ["黄苗", "僵苗", "坐蔸"]
+  },
+  "sym_root_whitening": {
+    "description": "白根外露是判断晒田适度的指标之一，表明白根活力好、土壤通透性改善。",
+    "aliases": ["白根外露", "新根白化"]
+  },
+  "prac_field_drying": {
+    "description": "晒田（搁田）是分蘖后期控制无效分蘖、促进壮秆的栽培措施，需掌握时机与程度。",
+    "aliases": ["搁田", "烤田", "落水烤田"]
+  },
+  "prac_field_drainage": {
+    "description": "三沟排灌（厢沟、腰沟、围沟）是稻田基础设施，确保排灌通畅、防旱防渍。",
+    "aliases": ["三沟", "排灌沟系"]
+  },
+  "env_water_depth_35": {
+    "description": "水层3-5厘米是水稻分蘖期浅水勤灌的推荐深度，既保持土壤湿润又不过深。",
+    "aliases": ["浅水层", "薄水层"]
+  },
+  "risk_root_damage": {
+    "description": "根系损伤会导致养分吸收受阻，表现为叶片黄化、分蘖减少，严重时死株。",
+    "aliases": ["根系受损"]
   }
 }

@@ -1,0 +1,167 @@
+# 智慧农业：MySQL + Neo4j + Qdrant + RAG + Spring Boot + 前端（Nginx 反代 /api）
+#
+# 一键启动（仓库根目录）：
+#   1) 复制 docker/stack.env.example 为 .env 并填写 JWT_SECRET_KEY、NEO4J_PASSWORD 等
+#   2) docker compose up -d --build
+# 访问：http://localhost:8088  管理端（默认 admin / 123456，首次登录后请修改）
+# API/Swagger：http://localhost:8090/api/swagger-ui.html
+#
+# 说明：MySQL / Neo4j / Qdrant / 后端 / RAG 端口仅绑定 127.0.0.1，不直接暴露到公网；
+#       对外只暴露前端 8088，由 Nginx 反向代理 /api。
+
+name: smartagri-stack
+
+services:
+  smartagri-mysql:
+    image: mysql:8.4
+    container_name: smartagri-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-smart_agriculture}
+      MYSQL_USER: ${MYSQL_USER:-smartagri}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-smartagri}
+    ports:
+      - "127.0.0.1:${MYSQL_PORT:-3307}:3306"
+    volumes:
+      - smartagri_mysql_data:/var/lib/mysql
+      - ./docker/mysql/initdb.d:/docker-entrypoint-initdb.d:ro
+      - ./smart-agriculture-server/src/main/resources/db:/init-sql:ro
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_unicode_ci
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 36
+      start_period: 20s
+
+  smartagri-neo4j:
+    image: neo4j:5.26-community
+    container_name: smartagri-neo4j
+    restart: unless-stopped
+    environment:
+      # 注意：Neo4j 镜像会把所有 NEO4J_* 环境变量当作配置项解析，
+      # 因此不能再额外注入 NEO4J_PASSWORD（会被当成非法配置 password 导致启动失败）。
+      # 健康检查直接从 NEO4J_AUTH 中截取密码。
+      NEO4J_AUTH: neo4j/${SMARTAGRI_NEO4J_PASSWORD:?请在 .env 中设置 SMARTAGRI_NEO4J_PASSWORD}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - smartagri_neo4j_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "cypher-shell -a bolt://127.0.0.1:7687 -u neo4j -p \"$${NEO4J_AUTH#*/}\" 'RETURN 1' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 40s
+
+  smartagri-qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: smartagri-qdrant
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:${QDRANT_REST_PORT:-6333}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - smartagri_qdrant_data:/qdrant/storage
+
+  smartagri-rag:
+    build:
+      context: ./rag-service
+      dockerfile: Dockerfile
+    container_name: smartagri-rag
+    restart: unless-stopped
+    environment:
+      APP_HOST: 0.0.0.0
+      APP_PORT: "9001"
+      QDRANT_HOST: smartagri-qdrant
+      QDRANT_PORT: "6333"
+      NEO4J_URI: bolt://smartagri-neo4j:7687
+      NEO4J_USER: neo4j
+      NEO4J_PASSWORD: ${SMARTAGRI_NEO4J_PASSWORD:?请在 .env 中设置 SMARTAGRI_NEO4J_PASSWORD}
+      SPRING_BACKEND_BASE_URL: http://smartagri-server:8080/api
+      CORS_ALLOW_ORIGINS: ${RAG_CORS_ALLOW_ORIGINS:-http://localhost:8088,http://127.0.0.1:8088,http://localhost:8090}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_BASE_URL: ${OPENAI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      LLM_FALLBACK_TO_MOCK: ${LLM_FALLBACK_TO_MOCK:-false}
+      KNOWLEDGE_RETRIEVAL_FALLBACK_TO_MOCK: ${KNOWLEDGE_RETRIEVAL_FALLBACK_TO_MOCK:-false}
+    ports:
+      - "127.0.0.1:${RAG_PORT:-9001}:9001"
+    volumes:
+      # 知识库目录以读写方式挂载，支持在界面直接上传文档
+      - ./rag-service/knowledge:/app/knowledge
+    depends_on:
+      smartagri-qdrant:
+        condition: service_started
+      smartagri-neo4j:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:9001/health', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  smartagri-server:
+    build:
+      context: ./smart-agriculture-server
+      dockerfile: Dockerfile
+    container_name: smartagri-server
+    restart: unless-stopped
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://smartagri-mysql:3306/${MYSQL_DATABASE:-smart_agriculture}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Shanghai
+      SPRING_DATASOURCE_USERNAME: ${MYSQL_USER:-smartagri}
+      SPRING_DATASOURCE_PASSWORD: ${MYSQL_PASSWORD:-smartagri}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY:?请在 .env 中设置 JWT_SECRET_KEY（至少32字节）}
+      CORS_ALLOWED_ORIGINS: ${CORS_ALLOWED_ORIGINS:-http://localhost:8088,http://127.0.0.1:8088,http://localhost:8090}
+      SWAGGER_ENABLED: ${SWAGGER_ENABLED:-true}
+      WARNING_AUTO_MIGRATE: ${WARNING_AUTO_MIGRATE:-true}
+      SMART_AGRI_RAG_BASE_URL: http://smartagri-rag:9001
+      SMART_AGRI_KG_BASE_URL: http://smartagri-rag:9001
+      SMART_AGRI_NEO4J_URI: bolt://smartagri-neo4j:7687
+      SMART_AGRI_NEO4J_USER: neo4j
+      SMART_AGRI_NEO4J_PASSWORD: ${SMARTAGRI_NEO4J_PASSWORD:?请在 .env 中设置 SMARTAGRI_NEO4J_PASSWORD}
+      SMART_AGRI_AI_API_KEY: ${SMART_AGRI_AI_API_KEY:-}
+      SMART_AGRI_AI_BASE_URL: ${SMART_AGRI_AI_BASE_URL:-https://dashscope.aliyuncs.com/compatible-mode/v1}
+      SMART_AGRI_AI_FALLBACK_TO_MOCK: ${SMART_AGRI_AI_FALLBACK_TO_MOCK:-false}
+    ports:
+      - "127.0.0.1:${SERVER_HTTP_PORT:-8090}:8080"
+    depends_on:
+      smartagri-mysql:
+        condition: service_healthy
+      smartagri-rag:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c 'exec 3<>/dev/tcp/127.0.0.1/8080' || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 60s
+
+  smartagri-web:
+    build:
+      context: .
+      dockerfile: docker/web/Dockerfile
+      args:
+        VITE_APP_BASE_API: /api
+    container_name: smartagri-web
+    restart: unless-stopped
+    ports:
+      - "${WEB_HTTP_PORT:-8088}:80"
+    depends_on:
+      smartagri-server:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q --spider http://127.0.0.1/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+volumes:
+  smartagri_mysql_data:
+  smartagri_neo4j_data:
+  smartagri_qdrant_data:

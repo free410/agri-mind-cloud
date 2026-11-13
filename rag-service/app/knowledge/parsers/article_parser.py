@@ -9,6 +9,7 @@ from bs4 import BeautifulSoup, Tag
 from app.core.config import settings
 from app.knowledge.parsers.metadata_enricher import detect_crop_type, detect_warning_type, infer_topic
 from app.knowledge.parsers.text_utils import domain_from_url, hash_text, normalize_text
+from app.services.knowledge.knowledge_text_cleaner import clean_for_index
 from app.schemas.crawl import CleanedKnowledgeRecord, CrawlSourceConfig, RawArticleRecord
 
 
@@ -59,6 +60,7 @@ class ArticleParser:
         self._remove_noise(content_node, rules.remove_selectors)
         content = self._extract_structured_text(content_node)
         content = normalize_text(content)
+        content = clean_for_index(content)
         if len(content) < (source.min_content_length or settings.crawl_min_content_length):
             return None
 

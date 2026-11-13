@@ -44,15 +44,18 @@ function toggleAside() {
   z-index: 1;
   display: flex;
   height: 100vh;
+  min-height: 0;
+  overflow: hidden;
   gap: var(--app-grid-gap);
   padding: var(--app-content-padding-x);
-  overflow: hidden;
+  align-items: stretch;
 }
 
 .layout-aside {
   width: 248px;
-  height: 100%;
   flex: 0 0 248px;
+  height: 100%;
+  min-height: 0;
   position: relative;
   padding: 12px 10px;
   background: var(--app-menu-bg);
@@ -63,6 +66,19 @@ function toggleAside() {
     width 0.24s ease,
     flex-basis 0.24s ease,
     padding 0.24s ease;
+}
+
+/* 菜单在侧边栏内部滚动，侧边栏本身固定在视口 */
+.layout-aside :deep(.aside-menu) {
+  height: 100%;
+  min-height: 0;
+}
+
+.layout-aside :deep(.menu-panel) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .layout-shell.is-collapsed .layout-aside {
@@ -130,10 +146,11 @@ function toggleAside() {
   display: flex;
   flex: 1;
   min-width: 0;
+  height: 100%;
   min-height: 0;
+  overflow: hidden;
   flex-direction: column;
   gap: var(--app-card-content-gap);
-  overflow: hidden;
   border-radius: var(--app-radius);
 }
 
@@ -141,28 +158,32 @@ function toggleAside() {
   width: 100%;
   max-width: none;
   margin: 0;
+  flex-shrink: 0;
   backdrop-filter: saturate(110%) blur(1.2px);
 }
 
 .layout-content {
   flex: 1;
+  min-width: 0;
   min-height: 0;
-  overflow-x: hidden;
-  overflow-y: auto;
-  padding-right: 2px;
   display: flex;
   flex-direction: column;
+  overflow: hidden;
 }
 
 .content-wrapper {
   width: 100%;
   max-width: none;
-  flex: 1 1 auto;
+  flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
+  container-type: inline-size;
+  container-name: app-content;
   margin: 0;
   padding: var(--app-content-padding);
+  overflow-y: auto;
+  overscroll-behavior: contain;
   background: rgba(255, 255, 255, 0.90);
   border: 1px solid rgba(17, 82, 62, 0.08);
   box-shadow: var(--app-shadow);
@@ -172,8 +193,9 @@ function toggleAside() {
 @media (max-width: 1024px) {
   .layout-shell {
     height: auto;
-    flex-direction: column;
+    min-height: 100vh;
     overflow: visible;
+    flex-direction: column;
   }
 
   .layout-aside {
@@ -183,12 +205,18 @@ function toggleAside() {
     overflow: visible;
   }
 
+  .layout-aside :deep(.menu-panel) {
+    overflow: visible;
+  }
+
   .aside-toggle {
     display: none;
   }
 
   .layout-main,
-  .layout-content {
+  .layout-content,
+  .content-wrapper {
+    height: auto;
     overflow: visible;
   }
 }

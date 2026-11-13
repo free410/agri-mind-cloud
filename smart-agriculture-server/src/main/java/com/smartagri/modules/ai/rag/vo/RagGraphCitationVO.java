@@ -1,10 +1,16 @@
 package com.smartagri.modules.ai.rag.vo;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
+import java.util.Map;
+
 @Data
 @Builder
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class RagGraphCitationVO {
 
     private String id;
@@ -13,4 +19,7 @@ public class RagGraphCitationVO {
     private String title;
 
     private String kind;
+
+    /** 迷你子图数据，用于前端可视化 */
+    private Map<String, Object> subgraph;
 }

@@ -3,7 +3,6 @@
     <section class="page-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">设备资产与状态管理</span>
-        <h1 class="page-banner__title">设备管理</h1>
         <p class="page-banner__desc">统一管理物联网设备接入、在线状态与运行状态。</p>
       </div>
 
@@ -749,7 +748,7 @@ onMounted(async () => {
   justify-content: flex-end;
 }
 
-@media (max-width: 900px) {
+@container app-content (max-width: 780px) {
   .detail-grid {
     grid-template-columns: 1fr;
   }

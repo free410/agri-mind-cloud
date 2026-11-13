@@ -8,6 +8,7 @@ from fastapi.responses import JSONResponse
 
 from app.api import router as api_router
 from app.core.config import settings
+from app.services.qdrant_service import qdrant_service
 
 logger = logging.getLogger(__name__)
 
@@ -18,6 +19,15 @@ def create_app() -> FastAPI:
         version="0.1.0",
         description="智慧农业 AI / RAG 服务层（FastAPI + Qdrant）",
     )
+
+    @app.on_event("startup")
+    async def init_vector_collections() -> None:
+        # 启动时确保所有向量子库都存在，避免意图路由到未创建的集合时检索报错
+        try:
+            created = qdrant_service.init_all_collections()
+            logger.info("Qdrant 集合初始化完成，共 %d 个", len(created))
+        except Exception as exc:  # Qdrant 暂不可用时不阻塞服务启动
+            logger.warning("Qdrant 集合初始化失败: %s", exc)
 
     @app.exception_handler(RequestValidationError)
     async def request_validation_handler(_: Request, exc: RequestValidationError) -> JSONResponse:

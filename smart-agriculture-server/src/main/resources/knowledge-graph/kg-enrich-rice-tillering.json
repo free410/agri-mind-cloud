@@ -1,0 +1,36 @@
+{
+  "triples": [
+    {"headId": "stage_tillering", "headName": "分蘖期", "headKind": "growth_stage", "tailId": "crop_rice", "tailName": "水稻", "tailKind": "crop", "predicate": "主要生育阶段", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.99},
+    {"headId": "stage_tillering", "headName": "分蘖期", "headKind": "growth_stage", "tailId": "prac_shallow_irrigation", "tailName": "浅水勤灌", "tailKind": "practice", "predicate": "推荐水层管理", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.92},
+    {"headId": "crop_rice", "headName": "水稻", "headKind": "crop", "tailId": "stage_tillering", "tailName": "分蘖期", "tailKind": "growth_stage", "predicate": "关键生育阶段", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.95},
+    {"headId": "prac_shallow_irrigation", "headName": "浅水勤灌", "headKind": "practice", "tailId": "stress_water_depth_deep", "tailName": "水层过深", "tailKind": "stress", "predicate": "避免", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.9},
+    {"headId": "prac_shallow_irrigation", "headName": "浅水勤灌", "headKind": "practice", "tailId": "stress_root_hypoxia", "tailName": "根系缺氧", "tailKind": "stress", "predicate": "防止", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.88},
+    {"headId": "stress_water_depth_deep", "headName": "水层过深", "headKind": "stress", "tailId": "risk_root_damage", "tailName": "根系损伤", "tailKind": "concept", "predicate": "可导致", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.85},
+    {"headId": "stress_root_hypoxia", "headName": "根系缺氧", "headKind": "stress", "tailId": "sym_yellow_seedling", "tailName": "黄化僵苗", "tailKind": "symptom", "predicate": "常导致", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.82},
+    {"headId": "prac_drainage", "headName": "开沟排渍", "headKind": "practice", "tailId": "stress_root_hypoxia", "tailName": "根系缺氧", "tailKind": "stress", "predicate": "缓解", "sourceRef": "农田灌溉水质与节水灌溉技术规范", "confidence": 0.9},
+    {"headId": "prac_field_drying", "headName": "晒田", "headKind": "practice", "tailId": "crop_rice", "tailName": "水稻", "tailKind": "crop", "predicate": "促蘖壮杆措施", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.88},
+    {"headId": "prac_field_drying", "headName": "晒田", "headKind": "practice", "tailId": "sym_root_whitening", "tailName": "白根外露", "tailKind": "symptom", "predicate": "判断指标", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.78},
+    {"headId": "prac_irrigation", "headName": "灌溉补水", "headKind": "practice", "tailId": "stage_tillering", "tailName": "分蘖期", "tailKind": "growth_stage", "predicate": "关��管理时期", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.95},
+    {"headId": "sym_yellow_seedling", "headName": "黄化僵苗", "headKind": "symptom", "tailId": "crop_rice", "tailName": "水稻", "tailKind": "crop", "predicate": "分蘖期观察", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.8},
+    {"headId": "sym_yellow_seedling", "headName": "黄化僵苗", "headKind": "symptom", "tailId": "stress_root_hypoxia", "tailName": "根系缺氧", "tailKind": "stress", "predicate": "可能原因", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.72},
+    {"headId": "sym_yellow_seedling", "headName": "黄化僵苗", "headKind": "symptom", "tailId": "def_n", "tailName": "缺氮", "tailKind": "deficiency", "predicate": "可能原因", "sourceRef": "肥料合理使用准则通则", "confidence": 0.75},
+    {"headId": "prac_field_drainage", "headName": "三沟排灌", "headKind": "practice", "tailId": "crop_rice", "tailName": "水稻", "tailKind": "crop", "predicate": "基础设施", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.85},
+    {"headId": "env_water_depth_35", "headName": "水层3-5厘米", "headKind": "environment", "tailId": "stage_tillering", "tailName": "分蘖期", "tailKind": "growth_stage", "predicate": "推荐范围", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.92},
+    {"headId": "env_water_depth_35", "headName": "水层3-5厘米", "headKind": "environment", "tailId": "prac_shallow_irrigation", "tailName": "浅水勤灌", "tailKind": "practice", "predicate": "量化指标", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.95},
+    {"headId": "crop_rice", "headName": "水稻", "headKind": "crop", "tailId": "def_n", "tailName": "缺氮", "tailKind": "deficiency", "predicate": "分蘖期需氮高峰", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.88},
+    {"headId": "crop_rice", "headName": "水稻", "headKind": "crop", "tailId": "def_k", "tailName": "缺钾", "tailKind": "deficiency", "predicate": "中期需求大", "sourceRef": "水稻高产栽培技术规范", "confidence": 0.85},
+    {"headId": "env_continuous_rain", "headName": "持续阴雨", "headKind": "environment", "tailId": "stage_tillering", "tailName": "分蘖期", "tailKind": "growth_stage", "predicate": "需排水降渍", "sourceRef": "农业气象灾害风险区划要点", "confidence": 0.82}
+  ],
+  "entities": {
+    "stage_tillering": {"description": "分蘖期是水稻生长周期中决定有效穗数的关键时期，需精细水层管理促进低位分蘖发生。", "aliases": ["分蘖阶段", "蘖期"]},
+    "prac_shallow_irrigation": {"description": "浅水勤灌是分蘖期推荐的水层管理方式，水层深度控制在3-5厘米，促进根系发育与低位分蘖。", "aliases": ["浅灌", "薄水灌溉"]},
+    "stress_water_depth_deep": {"description": "水层过深会抑制水稻根系呼吸，导致根系活力下降、分蘖停滞，增加无效分蘖比例。", "aliases": ["深水", "淹水过深"]},
+    "stress_root_hypoxia": {"description": "根系缺氧是分蘖期常见胁迫，与水层过深、土壤板结等因素相关，影响养分吸收。", "aliases": ["根系窒息", "根缺氧"]},
+    "sym_yellow_seedling": {"description": "黄化僵苗表现为叶片褪绿、分蘖停滞，需排查水层、养分、病虫害等因素。", "aliases": ["黄苗", "僵苗", "坐蔸"]},
+    "sym_root_whitening": {"description": "白根外露是判断晒田适度的指标之一，表明白根活力好、土壤通透性改善。", "aliases": ["白根外露", "新根白化"]},
+    "prac_field_drying": {"description": "晒田（搁田）是分蘖后期控制无效分蘖、促进壮秆的栽培措施，需掌握时机与程度。", "aliases": ["搁田", "烤田", "落水烤田"]},
+    "prac_field_drainage": {"description": "三沟排灌（厢沟、腰沟、围沟）是稻田基础设施，确保排灌通畅、防旱防渍。", "aliases": ["三沟", "排灌沟系"]},
+    "env_water_depth_35": {"description": "水层3-5厘米是水稻分蘖期浅水勤灌的推荐深度，既保持土壤湿润又不过深。", "aliases": ["浅水层", "薄水层"]},
+    "risk_root_damage": {"description": "根系损伤会导致养分吸收受阻，表现为叶片黄化、分蘖减少，严重时死株。", "aliases": ["根系受损"]}
+  }
+}

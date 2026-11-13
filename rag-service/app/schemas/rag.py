@@ -1,6 +1,6 @@
 import logging
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Optional
 
 from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, ValidationError, model_validator
 
@@ -14,6 +14,9 @@ class RagSearchRequest(BaseModel):
         default_factory=lambda: ["knowledge", "business"]
     )
     context: dict[str, Any] = Field(default_factory=dict)
+    # 新增：意图路由参数
+    intent_domain: Optional[str] = Field(default=None, description="指定检索的知识领域")
+    min_similarity_score: Optional[float] = Field(default=0.5, ge=0.0, le=1.0, description="最低相似度阈值")
 
 
 class RagReferenceItem(BaseModel):
@@ -24,12 +27,16 @@ class RagReferenceItem(BaseModel):
     content: str
     score: float = 0.0
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # 新增：重排序分数
+    rerank_score: Optional[float] = None
 
 
 class RagSearchResponse(BaseModel):
     query: str
     total: int
     items: list[RagReferenceItem] = Field(default_factory=list)
+    # 新增：检索元数据
+    retrieval_metadata: Optional[dict[str, Any]] = None
 
 
 class RetrievedKnowledgeChunk(BaseModel):
@@ -39,6 +46,9 @@ class RetrievedKnowledgeChunk(BaseModel):
     source: str = ""
     score: float = 0.0
     metadata: dict[str, Any] = Field(default_factory=dict)
+    # 新增：重排序分数和领域标记
+    rerank_score: Optional[float] = None
+    domain: Optional[str] = None
 
 
 class WarningContextItem(BaseModel):
@@ -168,7 +178,7 @@ def _coerce_business_context(value: Any) -> BusinessContextPayload | None:
 
 
 class BuiltBusinessContext(BaseModel):
-    question_type: Literal["warning", "knowledge", "hybrid"]
+    question_type: Literal["warning", "knowledge", "hybrid"] = "knowledge"
     has_business_data: bool = False
     context_text: str = ""
     risk_signals: list[str] = Field(default_factory=list)
@@ -177,12 +187,23 @@ class BuiltBusinessContext(BaseModel):
 
 
 class QueryPlan(BaseModel):
-    question_type: Literal["warning", "knowledge", "hybrid"]
-    mode: Literal["auto", "business", "knowledge", "hybrid"]
+    """RAG查询计划：包含意图路由、检索策略等"""
+    question_type: Literal["warning", "knowledge", "hybrid"] = "knowledge"
+    mode: Literal["auto", "business", "knowledge", "hybrid"] = "auto"
     use_business_context: bool = True
     use_knowledge_retrieval: bool = True
     knowledge_top_k: int = 5
     topic_hint: str | None = None
+
+    # ========== 新增字段 ==========
+    # 意图路由信息
+    intent_domain: str = "general"  # crop_disease, market_price, agri_policy, general
+    intent_confidence: float = 0.5  # 0.0 ~ 1.0
+    matched_keywords: list[str] = Field(default_factory=list)
+
+    # 检索策略
+    target_collections: list[str] = Field(default_factory=list)  # 目标Qdrant集合列表
+    min_similarity_score: float = 0.5  # 最低相似度阈值
 
 
 class RagAnswerRequest(BaseModel):
@@ -200,6 +221,9 @@ class RagAnswerRequest(BaseModel):
     related_farmland_id: int | None = None
     retrieved_knowledge_chunks: list[RetrievedKnowledgeChunk] = Field(default_factory=list)
 
+    # 图谱引用：包含 entity_id, entity_name, entity_kind, subgraph
+    cited_knowledge_graph: list[dict[str, Any]] = Field(default_factory=list)
+
     # 兼容历史字段
     user_query: str | None = Field(default=None, max_length=1500)
     question: str | None = Field(default=None, max_length=1500)
@@ -209,6 +233,12 @@ class RagAnswerRequest(BaseModel):
     pull_business_context: bool = False
     business_context_hint: dict[str, Any] = Field(default_factory=dict)
     need_structured: bool = True
+
+    # ========== 新增字段 ==========
+    # 意图路由参数（用于覆盖自动判断）
+    intent_domain: str | None = Field(default=None, description="手动指定知识领域")
+    # 检索阈值（用于覆盖默认阈值）
+    min_similarity_score: float | None = Field(default=None, ge=0.0, le=1.0)
 
     @model_validator(mode="after")
     def normalize(self):
@@ -222,12 +252,16 @@ class RagAnswerRequest(BaseModel):
 
 
 class ModelStructuredOutput(BaseModel):
-    answer_summary: str
-    conclusion: str
+    answer_summary: str = ""
+    conclusion: str = ""
     possible_causes: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     priority: Literal["低", "中", "高"] = "中"
     should_manual_review: bool = False
+    # LLM 兜底时说明原因，前端据此显示提示
+    fallback_reason: str | None = Field(default=None, alias="fallbackReason")
+    # 新增：检索有效性标记
+    has_valid_retrieval: bool = True  # 是否有有效的检索结果
 
 
 class BusinessCitation(BaseModel):
@@ -242,14 +276,22 @@ class KnowledgeCitation(BaseModel):
     source: str
     score: float
     topic: str | None = None
+    # 新增：重排序分数
+    rerank_score: float | None = None
+    # 新增：领域标记
+    domain: str | None = None
+    # 新增：完整内容（用于前端检索详情展示）
+    content: str | None = None
+    # 新增：元数据
+    metadata: dict[str, Any] = Field(default_factory=dict)
 
 
 class RagAnswerResponse(BaseModel):
-    session_id: str
-    mode: str
-    question_type: Literal["warning", "knowledge", "hybrid"]
-    answer_summary: str
-    conclusion: str
+    session_id: str = "unknown"
+    mode: str = "auto"
+    question_type: Literal["warning", "knowledge", "hybrid"] = "knowledge"
+    answer_summary: str = ""
+    conclusion: str = ""
     possible_causes: list[str] = Field(default_factory=list)
     recommendations: list[str] = Field(default_factory=list)
     priority: Literal["低", "中", "高"] = "中"
@@ -257,10 +299,28 @@ class RagAnswerResponse(BaseModel):
     cited_business_context: BusinessCitation | None = None
     cited_knowledge_sources: list[KnowledgeCitation] = Field(default_factory=list)
 
+    # 知识图谱引用（实体 + 子图），由 rag_service.answer() 自动提取
+    cited_knowledge_graph: list[dict[str, Any]] = Field(default_factory=list)
+
+    # LLM 兜底原因，用于前端提示
+    fallback_reason: str | None = None
+
     # 保留调试与扩展字段
     debug_prompt: str | None = None
     references: list[RagReferenceItem] = Field(default_factory=list)
     business_context: BuiltBusinessContext | None = None
+
+    # ========== 新增字段 ==========
+    # 意图路由信息（便于前端展示）
+    intent_domain: str | None = None
+    intent_confidence: float | None = None
+    matched_keywords: list[str] = Field(default_factory=list)
+    # 检索元数据
+    retrieval_metadata: dict[str, Any] = Field(default_factory=dict)
+    # 无有效检索时标记
+    has_valid_retrieval: bool = True
+    # 反馈ID（用于用户反馈埋点）
+    feedback_id: str | None = None
 
 
 class RagBriefingRequest(BaseModel):
@@ -271,12 +331,29 @@ class RagBriefingRequest(BaseModel):
 
 
 class RagBriefingResponse(BaseModel):
-    title: str
-    date: str
-    summary: str
+    title: str = ""
+    date: str = ""
+    summary: str = ""
     key_points: list[str] = Field(default_factory=list)
     actions: list[str] = Field(default_factory=list)
     references: list[RagReferenceItem] = Field(default_factory=list)
+
+
+class UserFeedbackRequest(BaseModel):
+    """用户反馈请求：用于「有用/无用」反馈埋点"""
+    session_id: str = Field(..., description="会话ID")
+    question: str = Field(..., description="用户问题")
+    answer_id: str | None = Field(default=None, description="答案ID")
+    is_helpful: bool = Field(..., description="是否有用")
+    feedback_text: str | None = Field(default=None, max_length=500, description="反馈详情")
+    retrieved_refs: list[str] = Field(default_factory=list, description="本次检索引用的文档ID列表")
+
+
+class UserFeedbackResponse(BaseModel):
+    """用户反馈响应"""
+    success: bool
+    message: str = ""
+    feedback_id: str = ""
 
 
 def today_str() -> str:

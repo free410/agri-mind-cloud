@@ -1,0 +1,45 @@
+# 智慧农业：简化版 - Neo4j + Qdrant + 前端 Nginx
+# 使用已有镜像，无需从 Docker Hub 拉取
+#
+# 一键启动：
+#   docker compose -f docker-compose-simple.yml up -d
+# 访问：http://localhost:8088
+
+name: smartagri-simple
+
+services:
+  smartagri-neo4j:
+    image: neo4j:5.26-community
+    container_name: smartagri-neo4j
+    environment:
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?请在 .env 中设置 NEO4J_PASSWORD}
+    ports:
+      - "127.0.0.1:${NEO4J_HTTP_PORT:-7474}:7474"
+      - "127.0.0.1:${NEO4J_BOLT_PORT:-7687}:7687"
+    volumes:
+      - smartagri_neo4j_data:/data
+
+  smartagri-qdrant:
+    image: qdrant/qdrant:v1.12.4
+    container_name: smartagri-qdrant
+    ports:
+      - "127.0.0.1:${QDRANT_REST_PORT:-6333}:6333"
+      - "127.0.0.1:${QDRANT_GRPC_PORT:-6334}:6334"
+    volumes:
+      - smartagri_qdrant_data:/qdrant/storage
+
+  smartagri-web:
+    image: nginx:1.27-alpine
+    container_name: smartagri-web
+    ports:
+      - "${WEB_HTTP_PORT:-8088}:80"
+    volumes:
+      - ./smart-agriculture-web/dist:/usr/share/nginx/html:ro
+      - ./docker/nginx/simple.conf:/etc/nginx/conf.d/default.conf:ro
+    depends_on:
+      - smartagri-neo4j
+      - smartagri-qdrant
+
+volumes:
+  smartagri_neo4j_data:
+  smartagri_qdrant_data:

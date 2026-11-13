@@ -16,10 +16,9 @@ class ArticleSelectorRules(BaseModel):
 class CrawlSourceConfig(BaseModel):
     source_name: str
     base_url: HttpUrl
-    allowed_domains: list[str]
-    list_pages: list[HttpUrl]
-    list_page_patterns: list[str] = Field(default_factory=list)
-    article_selector_rules: ArticleSelectorRules
+    allowed_domains: list[str] = Field(default_factory=list)
+    list_pages: list[HttpUrl] = Field(default_factory=list)
+    list_page_link_pattern: str | None = None
     topic_tags: list[str] = Field(default_factory=list)
     source_type: str = "crop_guide"
     topic: str = "agriculture"

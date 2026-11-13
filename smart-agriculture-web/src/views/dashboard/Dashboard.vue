@@ -1,12 +1,12 @@
 <template>
   <div class="dashboard-page page-shell" v-loading="loading">
-    <section class="dashboard-hero page-card">
-      <div class="hero-main">
-        <h1>首页看板</h1>
-        <p>聚焦监测趋势、预警状态与闭环处置的核心信息。</p>
+    <section class="dashboard-hero page-banner">
+      <div class="hero-main page-banner__main">
+        <span class="page-banner__badge">运营总览</span>
+        <p class="page-banner__desc">聚焦监测趋势、预警状态与闭环处置的核心信息。</p>
       </div>
 
-      <div class="hero-actions">
+      <div class="hero-actions page-banner__actions">
         <span class="hero-pill success">比赛演示模式</span>
         <span class="hero-pill">本地环境</span>
         <span class="hero-user">{{ displayName }}</span>
@@ -820,27 +820,28 @@ function getLevelTag(levelName) {
 <style scoped lang="scss">
 .dashboard-page {
   gap: 16px;
+  width: 100%;
 }
 
 .dashboard-hero {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 16px;
-  min-height: 96px;
-  padding: 18px 22px;
+  gap: 14px;
+  min-height: var(--app-banner-min-height);
+  padding: var(--app-banner-padding-y) var(--app-banner-padding-x);
 }
 
 .hero-main h1 {
   margin: 0;
-  font-size: 30px;
+  font-size: 20px;
   line-height: 1.2;
   color: var(--app-text);
 }
 
 .hero-main p {
-  margin: 6px 0 0;
-  font-size: 13px;
+  margin: 0;
+  font-size: 12px;
   color: var(--app-text-secondary);
 }
 
@@ -887,12 +888,13 @@ function getLevelTag(levelName) {
 .core-card {
   display: flex;
   flex-direction: column;
-  min-height: 560px;
+  flex: 1 0 auto;
   padding: 14px 16px 16px;
 }
 
 .card-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
   gap: 10px;
@@ -903,19 +905,20 @@ function getLevelTag(levelName) {
 
 .card-head h3 {
   margin: 0;
-  font-size: 26px;
+  font-size: 18px;
   line-height: 1.2;
   color: var(--app-text);
 }
 
 .card-head p {
-  margin: 5px 0 0;
+  margin: 3px 0 0;
   font-size: 12px;
   color: var(--app-text-secondary);
 }
 
 .metric-tabs {
   display: inline-flex;
+  flex-shrink: 0;
   align-items: center;
   gap: 6px;
   padding: 4px;
@@ -933,6 +936,7 @@ function getLevelTag(levelName) {
   color: var(--app-text-secondary);
   font-size: 12px;
   font-weight: 600;
+  white-space: nowrap;
   cursor: pointer;
 }
 
@@ -952,7 +956,7 @@ function getLevelTag(levelName) {
 .trend-metric-box {
   display: grid;
   gap: 6px;
-  min-height: 84px;
+  flex: 1 0 auto;
   padding: 12px 14px;
   border-radius: 14px;
   border: 1px solid rgba(17, 82, 62, 0.1);
@@ -1001,7 +1005,7 @@ function getLevelTag(levelName) {
 }
 
 .insight-main .card-head h3 {
-  font-size: 24px;
+  font-size: 18px;
 }
 
 .insight-body {
@@ -1144,7 +1148,7 @@ function getLevelTag(levelName) {
 }
 
 .inspection-item {
-  min-height: 60px;
+  flex: 1 0 auto;
   padding: 10px 12px;
   border: 1px solid rgba(17, 82, 62, 0.08);
   border-radius: 12px;
@@ -1174,13 +1178,13 @@ function getLevelTag(levelName) {
 .bottom-card {
   display: flex;
   flex-direction: column;
-  min-height: 430px;
+  flex: 1 0 auto;
   padding: 14px 16px 16px;
 }
 
 .sub-chart {
   flex: 1;
-  min-height: 240px;
+  min-height: 200px;
   margin-top: 10px;
 }
 
@@ -1192,7 +1196,7 @@ function getLevelTag(levelName) {
 }
 
 .status-chip-item {
-  min-height: 56px;
+  flex: 1 0 auto;
   padding: 10px 12px;
   border: 1px solid rgba(17, 82, 62, 0.1);
   border-radius: 12px;
@@ -1213,13 +1217,13 @@ function getLevelTag(levelName) {
 }
 
 .warning-list-card {
-  min-height: 430px;
+  display: flex;
+  flex-direction: column;
 }
 
 .warning-list {
   display: grid;
   flex: 1;
-  grid-template-rows: repeat(4, minmax(0, 1fr));
   gap: 10px;
   margin-top: 10px;
 }
@@ -1229,7 +1233,7 @@ function getLevelTag(levelName) {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 72px;
+  flex: 1 0 auto;
   padding: 10px 12px;
   border: 1px solid rgba(17, 82, 62, 0.1);
   border-radius: 12px;
@@ -1266,7 +1270,7 @@ function getLevelTag(levelName) {
   color: var(--app-text-secondary);
 }
 
-@media (max-width: 1440px) {
+@container app-content (max-width: 900px) {
   .core-grid,
   .bottom-grid {
     grid-template-columns: 1fr;
@@ -1282,7 +1286,7 @@ function getLevelTag(levelName) {
   }
 }
 
-@media (max-width: 900px) {
+@container app-content (max-width: 760px) {
   .dashboard-hero {
     flex-direction: column;
     align-items: flex-start;

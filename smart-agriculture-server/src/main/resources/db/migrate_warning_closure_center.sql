@@ -8,17 +8,85 @@ SET NAMES utf8mb4;
 -- 4) 初始化默认规则
 
 -- 1. warning 主表补字段
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `warning_no` VARCHAR(40) DEFAULT NULL COMMENT '预警编号' AFTER `id`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `related_crop_id` BIGINT DEFAULT NULL COMMENT '关联作物ID' AFTER `related_device_id`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `trigger_source` VARCHAR(32) DEFAULT 'RULE_ENGINE' COMMENT '触发来源' AFTER `related_crop_id`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `trigger_time` DATETIME DEFAULT NULL COMMENT '触发时间' AFTER `trigger_source`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `ai_analysis_summary` VARCHAR(1000) DEFAULT NULL COMMENT 'AI分析摘要' AFTER `trigger_time`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `ai_suggestion_summary` VARCHAR(1000) DEFAULT NULL COMMENT 'AI建议摘要' AFTER `ai_analysis_summary`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `handler_name` VARCHAR(64) DEFAULT NULL COMMENT '处理人' AFTER `ai_suggestion_summary`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `handle_time` DATETIME DEFAULT NULL COMMENT '处理时间' AFTER `handler_name`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `handle_remark` VARCHAR(1000) DEFAULT NULL COMMENT '处理说明' AFTER `handle_time`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `close_time` DATETIME DEFAULT NULL COMMENT '闭环时间' AFTER `handle_remark`;
-ALTER TABLE `warning` ADD COLUMN IF NOT EXISTS `is_false_alarm` TINYINT NOT NULL DEFAULT 0 COMMENT '是否误报' AFTER `close_time`;
+-- 注意：MySQL 8 不支持 MariaDB 的 ADD COLUMN IF NOT EXISTS，改用 information_schema 判断后动态执行
+SET @db_name = DATABASE();
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'warning_no'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `warning_no` VARCHAR(40) DEFAULT NULL COMMENT ''预警编号'' AFTER `id`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'related_crop_id'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `related_crop_id` BIGINT DEFAULT NULL COMMENT ''关联作物ID'' AFTER `related_device_id`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'trigger_source'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `trigger_source` VARCHAR(32) DEFAULT ''RULE_ENGINE'' COMMENT ''触发来源'' AFTER `related_crop_id`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'trigger_time'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `trigger_time` DATETIME DEFAULT NULL COMMENT ''触发时间'' AFTER `trigger_source`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'ai_analysis_summary'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `ai_analysis_summary` VARCHAR(1000) DEFAULT NULL COMMENT ''AI分析摘要'' AFTER `trigger_time`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'ai_suggestion_summary'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `ai_suggestion_summary` VARCHAR(1000) DEFAULT NULL COMMENT ''AI建议摘要'' AFTER `ai_analysis_summary`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'handler_name'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `handler_name` VARCHAR(64) DEFAULT NULL COMMENT ''处理人'' AFTER `ai_suggestion_summary`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'handle_time'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `handle_time` DATETIME DEFAULT NULL COMMENT ''处理时间'' AFTER `handler_name`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'handle_remark'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `handle_remark` VARCHAR(1000) DEFAULT NULL COMMENT ''处理说明'' AFTER `handle_time`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'close_time'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `close_time` DATETIME DEFAULT NULL COMMENT ''闭环时间'' AFTER `handle_remark`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
+
+SET @sql = IF(
+    EXISTS(SELECT 1 FROM information_schema.columns WHERE table_schema = @db_name AND table_name = 'warning' AND column_name = 'is_false_alarm'),
+    'SELECT 1',
+    'ALTER TABLE `warning` ADD COLUMN `is_false_alarm` TINYINT NOT NULL DEFAULT 0 COMMENT ''是否误报'' AFTER `close_time`'
+);
+PREPARE stmt FROM @sql; EXECUTE stmt; DEALLOCATE PREPARE stmt;
 
 ALTER TABLE `warning`
     MODIFY COLUMN `status` TINYINT NOT NULL DEFAULT 0 COMMENT '状态：0待确认，1处理中，2已处理，3已闭环';

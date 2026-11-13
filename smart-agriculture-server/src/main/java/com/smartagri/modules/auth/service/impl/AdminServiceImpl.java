@@ -18,10 +18,22 @@ import org.apache.commons.lang3.StringUtils;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.ArrayDeque;
+import java.util.Deque;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements AdminService {
+
+    private static final int MAX_FAILED_ATTEMPTS = 5;
+    private static final Duration LOCK_WINDOW = Duration.ofMinutes(5);
+    private static final int MAX_TRACKED_USERS = 10000;
+
+    /** 单实例内的登录失败计数；多实例部署可替换为 Redis 等共享存储。 */
+    private final Map<String, Deque<Long>> loginFailures = new ConcurrentHashMap<>();
 
     private final JwtUtils jwtUtils;
     private final JwtProperties jwtProperties;
@@ -35,14 +47,17 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
 
     @Override
     public AdminLoginVO login(AdminLoginRequest request) {
+        assertLoginAllowed(request.getUsername());
         Admin admin = findByUsername(request.getUsername());
         if (admin == null || !passwordEncoder.matches(request.getPassword(), admin.getPassword())) {
+            recordLoginFailure(request.getUsername());
             throw new BusinessException(ResultCode.UNAUTHORIZED, "用户名或密码错误");
         }
         if (!Integer.valueOf(1).equals(admin.getStatus())) {
             throw new BusinessException(ResultCode.FORBIDDEN, "当前管理员账号已被禁用");
         }
 
+        clearLoginFailures(request.getUsername());
         admin.setLastLoginTime(LocalDateTime.now());
         updateById(admin);
 
@@ -98,6 +113,43 @@ public class AdminServiceImpl extends ServiceImpl<AdminMapper, Admin> implements
             throw new BusinessException(ResultCode.NOT_FOUND, "管理员不存在");
         }
         return admin;
+    }
+
+    private void assertLoginAllowed(String username) {
+        Deque<Long> failures = loginFailures.get(username);
+        if (failures == null) {
+            return;
+        }
+        long cutoff = System.currentTimeMillis() - LOCK_WINDOW.toMillis();
+        synchronized (failures) {
+            while (!failures.isEmpty() && failures.peekFirst() < cutoff) {
+                failures.pollFirst();
+            }
+            if (failures.size() >= MAX_FAILED_ATTEMPTS) {
+                long retryAfterSeconds = Math.max(1,
+                        (failures.peekFirst() + LOCK_WINDOW.toMillis() - System.currentTimeMillis()) / 1000);
+                throw new BusinessException(ResultCode.FORBIDDEN,
+                        "登录失败次数过多，请 " + retryAfterSeconds + " 秒后再试");
+            }
+        }
+    }
+
+    private void recordLoginFailure(String username) {
+        if (loginFailures.size() > MAX_TRACKED_USERS) {
+            loginFailures.clear();
+        }
+        Deque<Long> failures = loginFailures.computeIfAbsent(username, key -> new ArrayDeque<>());
+        long cutoff = System.currentTimeMillis() - LOCK_WINDOW.toMillis();
+        synchronized (failures) {
+            while (!failures.isEmpty() && failures.peekFirst() < cutoff) {
+                failures.pollFirst();
+            }
+            failures.addLast(System.currentTimeMillis());
+        }
+    }
+
+    private void clearLoginFailures(String username) {
+        loginFailures.remove(username);
     }
 
     private Admin findByUsername(String username) {

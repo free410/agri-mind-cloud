@@ -44,6 +44,11 @@ class Settings(BaseSettings):
 
     embedding_model: str = Field(default="text-embedding-v4", alias="EMBEDDING_MODEL")
     embedding_provider: str = Field(default="openai", alias="EMBEDDING_PROVIDER")
+    local_embedding_model: str = Field(
+        default="paraphrase-multilingual-MiniLM-L12-v2",
+        alias="LOCAL_EMBEDDING_MODEL",
+        description="本地 embedding 模型名称（sentence-transformers）"
+    )
     openai_base_url: str = Field(
         default="https://dashscope.aliyuncs.com/compatible-mode/v1",
         alias="OPENAI_BASE_URL",
@@ -66,9 +71,9 @@ class Settings(BaseSettings):
     )
     llm_fallback_to_mock: bool = Field(default=False, alias="LLM_FALLBACK_TO_MOCK")
     knowledge_retrieval_fallback_to_mock: bool = Field(
-        default=True,
+        default=False,
         alias="KNOWLEDGE_RETRIEVAL_FALLBACK_TO_MOCK",
-        description="Qdrant/向量检索异常时回退到本地 mock 片段，本地开发默认真；生产可设 false",
+        description="Qdrant/向量检索异常时是否回退到本地 mock 片段；默认关闭以避免掩盖真实故障",
     )
 
     spring_backend_base_url: str = Field(default="http://localhost:8080/api", alias="SPRING_BACKEND_BASE_URL")
@@ -98,6 +103,63 @@ class Settings(BaseSettings):
     neo4j_password: str = Field(default="", alias="NEO4J_PASSWORD")
     neo4j_database: str | None = Field(default=None, alias="NEO4J_DATABASE")
     neo4j_max_subgraph_paths: int = Field(default=400, alias="NEO4J_MAX_SUBGRAPH_PATHS")
+
+    # ========== 检索优化配置 ==========
+    # 相似度阈值过滤
+    retrieval_min_similarity_score: float = Field(
+        default=0.5,
+        alias="RETRIEVAL_MIN_SIMILARITY_SCORE",
+        description="检索结果最低相似度阈值，低于此值的结果将被过滤掉"
+    )
+    retrieval_default_top_k: int = Field(
+        default=10,
+        alias="RETRIEVAL_DEFAULT_TOP_K",
+        description="默认检索返回数量"
+    )
+    retrieval_rerank_top_k: int = Field(
+        default=3,
+        alias="RETRIEVAL_RERANK_TOP_K",
+        description="Reranker重排序后保留数量"
+    )
+
+    # Reranker配置
+    reranker_enabled: bool = Field(
+        default=False,
+        alias="RERANKER_ENABLED",
+        description="是否启用Reranker重排序"
+    )
+    reranker_api_url: str = Field(
+        default="http://localhost:8000/rerank",
+        alias="RERANKER_API_URL",
+        description="Reranker服务地址"
+    )
+    reranker_model: str = Field(
+        default="BAAI/bge-reranker-v2-m3",
+        alias="RERANKER_MODEL",
+        description="Reranker模型名称"
+    )
+    reranker_api_key: str = Field(
+        default="",
+        alias="RERANKER_API_KEY",
+        description="Reranker API密钥"
+    )
+
+    # 知识库集合配置
+    qdrant_collection_crop_disease: str = Field(
+        default="agriculture_crop_disease",
+        alias="QDRANT_COLLECTION_CROP_DISEASE",
+        description="作物病害知识库集合名"
+    )
+    qdrant_collection_market_price: str = Field(
+        default="agriculture_market_price",
+        alias="QDRANT_COLLECTION_MARKET_PRICE",
+        description="农产品价格知识库集合名"
+    )
+    qdrant_collection_agri_policy: str = Field(
+        default="agriculture_agri_policy",
+        alias="QDRANT_COLLECTION_AGRI_POLICY",
+        description="农业政策知识库集合名"
+    )
 
     @field_validator("neo4j_password", mode="before")
     @classmethod

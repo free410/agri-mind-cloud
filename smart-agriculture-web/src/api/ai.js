@@ -4,7 +4,9 @@ export function sendAiChatApi(data) {
   return request({
     url: '/ai/chat',
     method: 'post',
-    data
+    data,
+    // 真实大模型响应可能超过默认 10s，避免前端提前超时
+    timeout: 120000
   })
 }
 
@@ -47,5 +49,36 @@ export function sendAiRagChatApi(data) {
     data,
     // RAG：检索 + 大模型生成常超过全局 10s，单独放宽避免 axios 先超时
     timeout: 120000
+  })
+}
+
+export function uploadKnowledgeApi(file, category = 'crop') {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('category', category)
+  return request({
+    url: '/ai/rag/knowledge/upload',
+    method: 'post',
+    data: formData,
+    // 不手动设置 Content-Type，交给浏览器自动补 multipart boundary
+    // 上传后会触发切片 + 向量化，耗时较长
+    timeout: 300000
+  })
+}
+
+export function fetchKnowledgeDocumentsApi() {
+  return request({
+    url: '/ai/rag/knowledge/documents',
+    method: 'get',
+    timeout: 60000
+  })
+}
+
+export function deleteKnowledgeDocumentApi(path) {
+  return request({
+    url: '/ai/rag/knowledge/documents',
+    method: 'delete',
+    params: { path },
+    timeout: 60000
   })
 }

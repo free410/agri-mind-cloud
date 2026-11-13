@@ -19,7 +19,7 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         vector_size: int,
         base_url: str,
         dimensions: int | None = None,
-        timeout_seconds: float = 120.0,
+        timeout_seconds: float = 5.0,
     ):
         self.model = model
         self.api_key = api_key.strip()
@@ -47,6 +47,13 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
 
         with httpx.Client(timeout=self.timeout_seconds) as client:
             resp = client.post(url, json=body, headers=headers)
+            # 百炼兼容：dimensions 与模型/地域不兼容时去掉重试；仍 400 则拆半批（应对更严的 batch 上限）
+            if resp.status_code == 400 and body.get("dimensions") is not None:
+                body = {k: v for k, v in body.items() if k != "dimensions"}
+                resp = client.post(url, json=body, headers=headers)
+            if resp.status_code == 400 and len(inputs) > 1:
+                mid = max(1, len(inputs) // 2)
+                return self._post_embeddings(inputs[:mid]) + self._post_embeddings(inputs[mid:])
             resp.raise_for_status()
             data = resp.json()
 
@@ -77,7 +84,8 @@ class OpenAIEmbeddingProvider(EmbeddingProvider):
         if not texts:
             return []
         out: list[list[float]] = []
-        batch_size = 16
+        # DashScope 兼容 /v1/embeddings 常见单次 input 上限 10，超过易 400
+        batch_size = 10
         for i in range(0, len(texts), batch_size):
             batch = texts[i : i + batch_size]
             out.extend(self._post_embeddings(batch))

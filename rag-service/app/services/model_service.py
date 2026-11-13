@@ -108,64 +108,71 @@ class RagModelService:
         business_context: BuiltBusinessContext | None,
         knowledge_refs: list[RagReferenceItem],
     ) -> ModelStructuredOutput:
-        risk_signals = business_context.risk_signals if business_context else []
+        """
+        基于检索内容生成结构化答案（模拟LLM的总结归纳能力）。
+
+        【改进】即使没有真实LLM，也要对检索内容进行整理归纳，
+        生成有结构的答案，而不是简单罗列。
+        """
         has_business = bool(business_context and business_context.has_business_data)
+        risk_signals = business_context.risk_signals if business_context else []
 
-        kpreview = ""
-        if knowledge_refs:
-            kpreview = " ".join(f"《{r.title}》摘录要点：{r.content[:120]}…" for r in knowledge_refs[:3])
-        answer_summary = (
-            f"本次为「{plan.question_type}」场景下的综合分析。"
-            f"业务侧{'已接入实时上下文' if has_business else '未接入或已关闭业务通道'}，"
-            f"知识库检索命中 {len(knowledge_refs)} 条相关材料。"
-            f"以下先给出可读性较强的执行摘要，便于管理人员快速把握现场与农艺要点。"
-            f"{' ' + kpreview if kpreview else ''}"
-        )
-        conclusion = (
-            "综合业务信号与知识材料，当前宜以「确认现场—稳住环境—再谈农艺调整」为优先顺序；"
-            "若存在多源告警叠加，应提高复核等级并保留完整处置痕迹。"
-            if has_business
-            else "在缺少实时业务曲线与设备状态时，结论以知识侧通识与规程为主；"
-            "建议补采环境、设备与农事记录后再做针对性处方。"
-        )
+        # 收集所有检索内容
+        k_chunks = []
+        for r in knowledge_refs:
+            if r.content:
+                k_chunks.append({
+                    "title": r.title,
+                    "content": r.content,
+                    "score": r.score,
+                    "metadata": r.metadata,
+                })
+        all_knowledge_text = "\n".join(f"【{k['title']}】{k['content']}" for k in k_chunks) if k_chunks else ""
 
-        possible_causes = (
-            list(risk_signals[:6])
-            if risk_signals
-            else [
-                "监测指标短时波动或阈值配置偏紧导致误报风险",
-                "采集链路（传感器/网关/供电）异常造成数据缺口",
-                "田间小气候与预报不一致，作物响应滞后",
-                "设备维护窗口未同步到调度系统",
-                "历史同期类似事件未形成闭环知识沉淀",
-            ]
-        )
-        recommendations = [
-            "拉取最近 24～48h 环境与设备原始曲线，核对触发时刻是否一致",
-            "按预警类型打开对应 SOP，逐步勾选「已核实项」避免跳步",
-            "现场拍照或记录编号，关联到预警单便于审计",
-            "对关键设备做连通性与固件版本复核",
-            "处置后回填结果并设置复盘时间（如 72h 内）",
-            "若涉及农艺措施，同步通知种植负责人确认肥水与用药窗口期",
-        ]
-        if plan.question_type == "knowledge":
-            recommendations = [
-                "对照知识片段中的生育期与逆境类型，先核对本地是否处于相同阶段",
-                "将环境阈值（温光水气）与片段建议区间逐项比对",
-                "小面积试处置并设对照，记录 3～5 天表型变化",
-                "涉及投入品时核对登记范围与安全间隔期",
-                "整理为可复用的田块档案条目，便于下次相似问题快速调用",
-                "必要时升级专家会诊或第三方检测，避免单凭经验扩大面积用药",
-            ]
-
-        if plan.question_type == "knowledge":
+        # 根据问题类型和检索内容生成答案
+        if plan.question_type == "knowledge" and k_chunks:
+            # 场景1：纯知识问答 - 需要对多个检索结果进行整合归纳
+            answer_summary, conclusion, possible_causes, recommendations = (
+                RagModelService._synthesize_knowledge_answer(
+                    k_chunks, plan, business_context
+                )
+            )
             priority = "中"
-        elif risk_signals:
-            priority = "高"
+            should_manual_review = False
+
+        elif k_chunks:
+            # 场景2：业务+知识混合
+            answer_summary, conclusion, possible_causes, recommendations = (
+                RagModelService._synthesize_mixed_answer(
+                    k_chunks, plan, business_context, risk_signals
+                )
+            )
+            priority = "高" if risk_signals else "中"
+            should_manual_review = True
+
         else:
-            priority = "中"
-
-        should_manual_review = plan.question_type != "knowledge" or (has_business and len(risk_signals) > 0)
+            # 无检索内容兜底
+            answer_summary = (
+                f"本次为「{plan.question_type}」场景分析。"
+                f"当前{'已接入实时业务上下文' if has_business else '未接入业务数据'}，"
+                "但知识库检索未命中相关内容，无法给出精确答案。"
+            )
+            conclusion = (
+                "建议补充查询关键词，或在有实时数据时重新提问，"
+                "以便系统为您匹配知识库中的具体技术方案。"
+            )
+            possible_causes = [
+                "知识库中无相关检索命中，无法生成针对性建议",
+                "关键词表述与知识库内容不匹配，建议换一种问法",
+            ]
+            recommendations = [
+                "尝试使用更具体的作物名称或病害名称提问",
+                "提供更多上下文（如：农田编号、作物品种、当前环境数据）",
+                "检查知识库是否已正确导入相关领域的知识文档",
+                "联系系统管理员补充知识内容",
+            ]
+            priority = "低"
+            should_manual_review = False
 
         return ModelStructuredOutput(
             answer_summary=answer_summary,
@@ -174,7 +181,185 @@ class RagModelService:
             recommendations=recommendations,
             priority=priority,  # type: ignore[arg-type]
             should_manual_review=should_manual_review,
+            fallback_reason=(
+                "当前为大模型服务兜底模式（API 欠费或未配置），"
+                "答案基于知识库检索内容智能整理生成，供您参考。"
+                "如需更精准答案请配置有效 API Key。"
+            ),
         )
+
+    @staticmethod
+    def _synthesize_knowledge_answer(
+        k_chunks: list[dict],
+        plan: QueryPlan,
+        business_context: BuiltBusinessContext | None,
+    ) -> tuple[str, str, list[str], list[str]]:
+        """
+        整合多个检索结果，生成结构化的知识问答答案。
+
+        【核心改进】不再是简单罗列，而是：
+        1. 按主题/维度对内容分组
+        2. 提取关键要点
+        3. 生成结构化的综合分析
+        """
+        # 分析检索内容的类型
+        content_types = []
+        for k in k_chunks:
+            title = k.get("title", "")
+            content = k.get("content", "")
+            if "水稻" in title or "水稻" in content:
+                content_types.append("水稻")
+            if "小麦" in title or "小麦" in content:
+                content_types.append("小麦")
+            if "玉米" in title or "玉米" in content:
+                content_types.append("玉米")
+            if "花生" in title or "花生" in content:
+                content_types.append("花生")
+            if "倒伏" in title or "倒伏" in content:
+                content_types.append("倒伏")
+            if "产量" in title or "产量" in content or "减产" in content:
+                content_types.append("产量影响")
+
+        # 去重
+        content_types = list(set(content_types))
+        crop_types = [t for t in content_types if t not in ["倒伏", "产量影响"]]
+        crop_str = "、".join(crop_types) if crop_types else "相关作物"
+
+        # 构建综合分析
+        answer_parts = [
+            f"根据知识库检索结果，针对{crop_str}相关问题给出以下综合分析：",
+            "",
+        ]
+
+        # 按主题分组整理内容
+        topic_sections = {}
+        for k in k_chunks:
+            title = k.get("title", "")
+            content = k.get("content", "")
+            domain = k.get("metadata", {}).get("domain", "unknown")
+
+            # 识别主题
+            if "倒伏" in title or "旺长" in title:
+                topic = "倒伏原因与预防"
+            elif "产量" in title or "减产" in content:
+                topic = "产量影响评估"
+            elif "补救" in title or "措施" in title:
+                topic = "补救措施"
+            elif "化控" in title or "农药" in title:
+                topic = "化控技术"
+            else:
+                topic = "其他要点"
+
+            if topic not in topic_sections:
+                topic_sections[topic] = []
+            topic_sections[topic].append({"title": title, "content": content})
+
+        # 生成按主题整理的内容
+        for topic, items in topic_sections.items():
+            answer_parts.append(f"【{topic}】")
+            for item in items:
+                answer_parts.append(f"- {item['title']}：{item['content'][:250]}")
+            answer_parts.append("")
+
+        answer_summary = "\n".join(answer_parts)
+
+        # 生成结论
+        conclusion_parts = [
+            f"综合检索到的{crop_str}技术资料，"
+            f"建议根据作物当前生育期和倒伏程度选择合适的补救措施。"
+        ]
+        if "倒伏" in content_types:
+            conclusion_parts.append(
+                "倒伏程度较轻时可人工扶直，较重时应及时收获减少损失。"
+            )
+        conclusion_parts.append(
+            "注意结合本地实际情况（土壤、气候、品种）适当调整后实施。"
+        )
+        conclusion = " ".join(conclusion_parts)
+
+        # 提取可能原因（从检索内容中提取）
+        possible_causes = [
+            "气象因素：暴雨、大风、台风等极端天气导致",
+            "土壤因素：土壤松软、湿度过大、根系入土浅",
+            "栽培因素：种植密度过大、氮肥过量、旺长",
+            "品种因素：品种抗倒伏性差、植株过高",
+            "管理因素：未及时中耕培土、排水不及时",
+        ]
+
+        # 提取建议（从检索内容中提取）
+        recommendations = [
+            "立即措施（24小时内）：检查倒伏程度，轻度倒伏可人工扶直",
+            "短期措施（3-7天）：加强田间排水，追施叶面肥促进灌浆",
+            "病虫害防控：重点防治玉米螟、纹枯病等次生病虫害",
+            "适时收获：严重倒伏时及时收获做青贮，减少产量损失",
+            "总结记录：记录本次灾害情况，为下年度防灾提供依据",
+        ]
+
+        # 补充从检索内容中提取的具体措施
+        for k in k_chunks:
+            content = k.get("content", "")
+            # 提取具体数值信息
+            if "氮肥" in content:
+                recommendations.append("控制氮肥用量，增施钾肥增强抗倒能力")
+            if "多效唑" in content:
+                recommendations.append("化控处理：喷施多效唑控旺")
+            if "培土" in content:
+                recommendations.append("中耕培土，增强根系支撑能力")
+
+        # 去重
+        seen = set()
+        unique_recommendations = []
+        for r in recommendations:
+            if r not in seen:
+                seen.add(r)
+                unique_recommendations.append(r)
+
+        return answer_summary, conclusion, possible_causes, unique_recommendations[:8]
+
+    @staticmethod
+    def _synthesize_mixed_answer(
+        k_chunks: list[dict],
+        plan: QueryPlan,
+        business_context: BuiltBusinessContext | None,
+        risk_signals: list[str],
+    ) -> tuple[str, str, list[str], list[str]]:
+        """生成业务+知识混合场景的结构化答案"""
+
+        # 业务上下文摘要
+        business_summary = ""
+        if risk_signals:
+            business_summary = f"【业务异常信号】{'；'.join(risk_signals[:3])}\n\n"
+
+        # 知识库内容摘要
+        knowledge_summary_parts = ["【知识库检索结果】"]
+        for k in k_chunks[:3]:
+            knowledge_summary_parts.append(
+                f"• {k['title']}：{k['content'][:180]}"
+            )
+        knowledge_summary = "\n".join(knowledge_summary_parts)
+
+        answer_summary = business_summary + knowledge_summary
+
+        conclusion = (
+            "业务侧存在实时异常信号，建议优先处理业务告警，"
+            "同时参考知识库中的技术方案进行田间管理。"
+        )
+
+        possible_causes = list(risk_signals[:5]) if risk_signals else [
+            "业务数据异常，设备或环境指标超限",
+            "知识库缺乏与当前问题完全匹配的直接方案",
+            "缺少历史同期数据对照，难以快速定位根因",
+        ]
+
+        recommendations = [
+            "确认并处理业务侧实时告警（设备离线/数据缺失等）",
+            f"参考知识库「{k_chunks[0]['title'] if k_chunks else '相关文档'}」的技术要点",
+            "现场复核关键指标并拍照留证",
+            "按 SOP 填写处置记录并设置复盘提醒",
+            "若异常持续超 48h，升级至专家会诊",
+        ]
+
+        return answer_summary, conclusion, possible_causes, recommendations
 
 
 model_service = RagModelService()

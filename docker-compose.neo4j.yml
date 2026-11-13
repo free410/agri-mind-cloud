@@ -8,8 +8,8 @@ services:
     image: neo4j:5.26-community
     container_name: smartagri-neo4j
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     env_file:
       - .env.docker.neo4j
     volumes:

@@ -3,16 +3,15 @@
     <section class="page-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">环境监测分析</span>
-        <h1 class="page-banner__title">环境监测</h1>
         <p class="page-banner__desc">
-          围绕温度、湿度、土壤湿度、光照与 pH 值构建监测分析页，适合展示农业环境数据的实时感知与趋势分析能力。
+          覆盖温度、湿度、土壤湿度、光照与 pH 值，支持实时感知与趋势分析。
         </p>
       </div>
 
       <div class="page-banner__actions">
         <div class="page-banner__meta">
           <span class="meta-label">数据状态</span>
-          <strong>{{ latestCollectTime || '等待数据' }}</strong>
+          <strong>{{ latestCollectTimeText }}</strong>
         </div>
         <div class="page-banner__meta">
           <span class="meta-label">当前农田</span>
@@ -246,6 +245,10 @@ onBeforeUnmount(() => {
 const latestRow = computed(() => tableData.value[0] || overviewData.value[0] || {})
 
 const latestCollectTime = computed(() => latestRow.value.collectTime || '')
+
+const latestCollectTimeText = computed(() =>
+  latestCollectTime.value ? latestCollectTime.value.replace('T', ' ').slice(0, 16) : '等待数据'
+)
 
 const currentFarmlandName = computed(() => {
   const current = farmlandOptions.value.find((item) => item.id === queryForm.farmlandId)
@@ -758,7 +761,7 @@ function getPhStatus(value) {
   background: rgba(23, 138, 98, 0.04) !important;
 }
 
-@media (max-width: 1400px) {
+@container app-content (max-width: 840px) {
   .monitor-main-grid {
     grid-template-columns: 1fr;
   }
@@ -774,7 +777,7 @@ function getPhStatus(value) {
   }
 }
 
-@media (max-width: 900px) {
+@container app-content (max-width: 760px) {
   .trend-summary-strip {
     grid-template-columns: 1fr;
   }

@@ -24,6 +24,16 @@ class BusinessContextBuilder:
         "原理",
         "SOP",
         "病虫害",
+        "病害",
+        "真菌",
+        "细菌",
+        "病毒",
+        "诊断",
+        "症状",
+        "病原",
+        "异同",
+        "比较",
+        "田间",
         "栽培",
         "指南",
     )
@@ -127,6 +137,16 @@ class BusinessContextBuilder:
             lines.append(
                 f"[历史AI分析] 优先级={latest_ai.priority} 需人工复核={latest_ai.need_manual_review} "
                 f"摘要={latest_ai.summary} 建议={latest_ai.suggestions}"
+            )
+
+        if not lines:
+            return BuiltBusinessContext(
+                question_type=question_type,  # type: ignore[arg-type]
+                has_business_data=False,
+                context_text="",
+                risk_signals=[],
+                summary_blocks=[],
+                raw=payload,
             )
 
         if not risk_signals:

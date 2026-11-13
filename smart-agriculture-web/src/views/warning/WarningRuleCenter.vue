@@ -3,7 +3,6 @@
     <section class="page-banner warning-rule-banner">
       <div class="page-banner__main">
         <span class="page-banner__badge">预警规则中心</span>
-        <h1 class="page-banner__title">自动预警规则配置台</h1>
         <p class="page-banner__desc">按农田、作物和监测指标配置触发条件，驱动智能预警自动生成。</p>
       </div>
       <div class="page-banner__actions">
@@ -693,13 +692,6 @@ function resetForm() {
 </script>
 
 <style scoped lang="scss">
-.warning-rule-banner {
-  background:
-    radial-gradient(circle at right top, rgba(59, 130, 246, 0.14), transparent 26%),
-    radial-gradient(circle at left center, rgba(34, 197, 94, 0.14), transparent 28%),
-    var(--app-hero-gradient);
-}
-
 .warning-rule-overview {
   grid-template-columns: repeat(4, minmax(0, 1fr));
 }
@@ -742,13 +734,13 @@ function resetForm() {
   gap: 4px 12px;
 }
 
-@media (max-width: 1280px) {
+@container app-content (max-width: 1000px) {
   .inspection-overview-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1024px) {
+@container app-content (max-width: 760px) {
   .warning-rule-overview {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }

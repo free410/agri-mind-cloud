@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Builder;
 import lombok.Data;
 
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -31,4 +32,11 @@ public class RagAnswerClientRequest {
 
     @JsonProperty("knowledge_graph_context")
     private String knowledgeGraphContext;
+
+    /**
+     * 图谱引用列表，包含实体信息和 subgraph 数据用于前端迷你图谱可视化。
+     * 每个元素包含: entity_id, entity_name, entity_kind, subgraph
+     */
+    @JsonProperty("cited_knowledge_graph")
+    private List<Map<String, Object>> citedKnowledgeGraph;
 }

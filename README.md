@@ -36,7 +36,8 @@
 | `smart-agriculture-web/` | 管理端前端：路由、页面、状态、与后端 API 交互。 |
 | `smart-agriculture-server/` | 业务与集成层：认证授权、领域 CRUD、预警与巡检、AI 与 RAG 聚合、知识图谱 API。 |
 | `rag-service/` | 检索与生成专用服务：向量检索、提示组装、调用大模型、抓取与入库脚本。 |
-| `docker-compose.neo4j.yml` | 本地或测试环境一键启动 Neo4j（Browser + Bolt）。 |
+| `docker-compose.yml` | **一键编排**：MySQL、Neo4j、Qdrant、RAG、Spring Boot、前端（Nginx 反代 `/api`）。 |
+| `docker-compose.neo4j.yml` | 仅启动 Neo4j（可与全栈编排并存独立数据卷）。 |
 | `docs/` | 使用说明与示例（如 AI 助手提问示例等）。 |
 | `智慧农业管理系统-项目总说明.md` | 项目背景与功能补充说明（与本文档并行，可按需阅读）。 |
 
@@ -78,18 +79,34 @@
 | **Neo4j** | 存储实体与关系，支撑图谱浏览、子图查询及向 RAG 注入图谱摘要。 |
 | **兼容 LLM API** | 提供对话与结构化 JSON 输出（具体厂商由环境变量配置）。 |
 
-### 3.5 Docker 与容器化（仓库内现状）
+### 3.5 Docker 一键启动（全栈）
 
-本仓库**已纳入版本管理**的 Docker 编排目前**仅包含 Neo4j**，用于知识图谱本地/测试环境；**未提供**「Spring + 前端 + rag-service + MySQL」的一体化 `docker-compose.yml`，业务服务默认以本机进程运行（或通过你方 CI/CD 自行镜像化）。
+仓库根目录 **`docker-compose.yml`** 可一次拉起：**MySQL 8.4**（自动执行 `smart-agriculture-server/src/main/resources/db` 下初始化脚本）、**Neo4j 5.26**、**Qdrant**、**rag-service**、**Spring Boot**、**Vue 静态资源 + Nginx**（浏览器访问前端，接口走同源 `/api` 反代）。
 
-| 资源 | 说明 |
+**步骤：**
+
+1. 安装 [Docker Desktop](https://www.docker.com/products/docker-desktop/)（或 Docker Engine + Compose 插件），确保已启动。
+2. 复制环境模板：`docker/stack.env.example` → 仓库根目录 **`.env`**（根目录 `.env` 勿提交；可按需改数据库口令、Neo4j 口令、`JWT_SECRET_KEY`、大模型与 RAG 的 API Key 等）。
+3. 在仓库根目录执行其一：
+   - **Windows**：`.\docker-up.ps1`
+   - **macOS / Linux**：`chmod +x docker-up.sh && ./docker-up.sh`
+   - 或手动：`docker compose up -d --build`
+
+**默认访问（与 `docker/stack.env.example` 中端口一致时）：**
+
+| 入口 | 地址 |
 |------|------|
-| **`docker-compose.neo4j.yml`** | 启动 Neo4j 5.x 社区版。须先复制 **`.env.docker.neo4j.example` → `.env.docker.neo4j`**（后者勿提交），再执行 `docker compose -f docker-compose.neo4j.yml up -d`。 |
-| **Qdrant（可选）** | 向量库常用官方镜像单独运行，例如：`docker run -d --name qdrant -p 6333:6333 qdrant/qdrant`。与 `rag-service` 中 `QDRANT_HOST`/`QDRANT_PORT` 对齐。 |
-| **MySQL** | 可使用官方 `mysql:8` 镜像或云数据库；连接串与 `application.yml` 一致即可。 |
-| **Spring / Vue / rag-service** | 仓库内**无**强制 Dockerfile；生产可将各子项目分别构建镜像，由 Compose 或 K8s 编排。 |
+| 管理端（Vue） | [http://localhost:8088](http://localhost:8088)（默认账号见 `docs/端到端联调与测试手册.md`，一般为 `admin` / `123456`） |
+| 后端 Swagger | [http://localhost:8090/api/swagger-ui.html](http://localhost:8090/api/swagger-ui.html) |
+| RAG 直连 | [http://localhost:9001/docs](http://localhost:9001/docs) |
+| Neo4j Browser | [http://localhost:7474](http://localhost:7474) |
+| MySQL（宿主机） | `127.0.0.1:3307`（容器内仍为 `3306`，避免与本机已有 MySQL 冲突） |
 
-联调步骤与端口表见 `docs/端到端联调与测试手册.md`。
+首次启动 MySQL 会执行初始化 SQL，可能需要 **1～3 分钟** 才健康；若修改了库结构脚本需重建库，请停止栈后删除卷：`docker compose down -v`（**会清空容器内数据库数据**）。
+
+**仅 Neo4j**：仍可使用 **`docker-compose.neo4j.yml`**（复制 `.env.docker.neo4j.example` → `.env.docker.neo4j` 后执行 `docker compose -f docker-compose.neo4j.yml up -d`）。全栈编排中的 Neo4j 使用独立数据卷，与单文件编排互不共享。
+
+联调步骤与更多端口说明见 `docs/端到端联调与测试手册.md`。
 
 ---
 
@@ -436,13 +453,14 @@ flowchart LR
 
 ## 15. 相关文档
 
-- [docs/端到端联调与测试手册.md](docs/端到端联调与测试手册.md) — **本机全链路联调步骤、接口与浏览器验收清单**  
-- [docs/Git与敏感信息.md](docs/Git与敏感信息.md) — **勿提交的密钥与本地配置方式**  
-- [smart-agriculture-server/README.md](smart-agriculture-server/README.md)  
-- [smart-agriculture-web/README.md](smart-agriculture-web/README.md)  
-- [rag-service/README.md](rag-service/README.md)  
-- [docs/AI助手-示例提问清单.md](docs/AI助手-示例提问清单.md)  
-- [智慧农业管理系统-项目总说明.md](智慧农业管理系统-项目总说明.md)  
+- [docs/端到端联调与测试手册.md](docs/端到端联调与测试手册.md) — **本机全链路联调步骤、接口与浏览器验收清单**
+- [docs/Git与敏感信息.md](docs/Git与敏感信息.md) — **勿提交的密钥与本地配置方式**
+- [项目技术说明文档.md](项目技术说明文档.md) — **完整技术说明（推荐阅读）**
+- [启动文档.md](启动文档.md) — **最快方式启动系统**
+- [smart-agriculture-server/README.md](smart-agriculture-server/README.md)
+- [smart-agriculture-web/README.md](smart-agriculture-web/README.md)
+- [rag-service/README.md](rag-service/README.md)
+- [docs/AI助手-示例提问清单.md](docs/AI助手-示例提问清单.md)
 
 ---
 

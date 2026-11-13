@@ -1,5 +1,7 @@
 package com.smartagri.modules.ai.vo;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -10,6 +12,7 @@ import java.util.List;
 @Data
 @Builder
 @Schema(description = "预警AI分析结果")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class WarningAiAnalysisVO {
 
     @Schema(description = "预警ID")

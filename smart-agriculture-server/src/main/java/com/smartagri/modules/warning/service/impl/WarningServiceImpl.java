@@ -39,7 +39,9 @@ import com.smartagri.modules.warning.vo.WarningFlowVO;
 import com.smartagri.modules.warning.vo.WarningListVO;
 import com.smartagri.modules.warning.vo.WarningProcessLogVO;
 import com.smartagri.modules.warning.vo.WarningReportEnvSnapshotVO;
+import com.smartagri.security.LoginAdminContext;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
@@ -118,13 +120,14 @@ public class WarningServiceImpl extends ServiceImpl<WarningMapper, WarningRecord
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void updateWarningStatus(WarningStatusUpdateRequest request) {
         if (!WarningStatusEnum.contains(request.getStatus())) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "预警状态取值不合法");
         }
 
         WarningRecord warning = getWarningOrThrow(request.getId());
-        String operatorName = resolveOperatorName(request.getHandlerName());
+        String operatorName = resolveOperatorName();
         String remark = StringUtils.trimWhitespace(request.getHandleRemark());
 
         if (Integer.valueOf(1).equals(request.getIsFalseAlarm())) {
@@ -137,13 +140,14 @@ public class WarningServiceImpl extends ServiceImpl<WarningMapper, WarningRecord
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void confirmWarning(Long id, WarningFlowActionRequest request) {
         WarningRecord warning = getWarningOrThrow(id);
         if (!Objects.equals(warning.getStatus(), WarningStatusEnum.TO_CONFIRM.getCode())) {
             throw new BusinessException(ResultCode.BAD_REQUEST, "仅待确认状态允许执行确认操作");
         }
 
-        String operator = resolveOperatorName(request.getOperatorName());
+        String operator = resolveOperatorName();
         warning.setHandlerName(operator);
         updateById(warning);
 
@@ -152,36 +156,40 @@ public class WarningServiceImpl extends ServiceImpl<WarningMapper, WarningRecord
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void markProcessing(Long id, WarningFlowActionRequest request) {
         WarningRecord warning = getWarningOrThrow(id);
         applyStatusTransition(warning, WarningStatusEnum.PROCESSING.getCode(),
                 WarningProcessActionEnum.START_PROCESS.getCode(),
-                resolveOperatorName(request.getOperatorName()),
+                resolveOperatorName(),
                 request.getProcessNote(), false);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void submitHandleResult(Long id, WarningHandleSubmitRequest request) {
         WarningRecord warning = getWarningOrThrow(id);
         applyStatusTransition(warning, WarningStatusEnum.HANDLED.getCode(),
                 WarningProcessActionEnum.SUBMIT_RESULT.getCode(),
-                resolveOperatorName(request.getOperatorName()),
+                resolveOperatorName(),
                 request.getHandleRemark(), false);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void closeWarning(Long id, WarningFlowActionRequest request) {
         WarningRecord warning = getWarningOrThrow(id);
         applyStatusTransition(warning, WarningStatusEnum.CLOSED_LOOP.getCode(),
                 WarningProcessActionEnum.CLOSE_LOOP.getCode(),
-                resolveOperatorName(request.getOperatorName()),
+                resolveOperatorName(),
                 request.getProcessNote(), false);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void markFalseAlarm(Long id, WarningFalseAlarmRequest request) {
         WarningRecord warning = getWarningOrThrow(id);
-        markFalseAlarmInternal(warning, resolveOperatorName(request.getOperatorName()), request.getFalseAlarmReason());
+        markFalseAlarmInternal(warning, resolveOperatorName(), request.getFalseAlarmReason());
     }
 
     @Override
@@ -263,12 +271,14 @@ public class WarningServiceImpl extends ServiceImpl<WarningMapper, WarningRecord
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void generateWarningsForEnvironmentData(EnvironmentData environmentData) {
         List<WarningTriggerCommand> commands = warningRuleEngineService.evaluateEnvironmentData(environmentData);
         commands.forEach(this::createWarningIfNeeded);
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public void generateDeviceOfflineWarning(Long deviceId) {
         Device device = deviceService.getById(deviceId);
         if (device == null) {
@@ -679,7 +689,8 @@ public class WarningServiceImpl extends ServiceImpl<WarningMapper, WarningRecord
                 + ThreadLocalRandom.current().nextInt(1000, 10000);
     }
 
-    private String resolveOperatorName(String operatorName) {
-        return StringUtils.hasText(operatorName) ? operatorName : "系统管理员";
+    private String resolveOperatorName() {
+        String username = LoginAdminContext.getUsername();
+        return StringUtils.hasText(username) ? username : "系统管理员";
     }
 }

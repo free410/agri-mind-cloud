@@ -22,12 +22,12 @@ import com.smartagri.modules.inspection.vo.InspectionTaskSummaryVO;
 import com.smartagri.modules.warning.entity.WarningRecord;
 import com.smartagri.modules.warning.enums.WarningLevelEnum;
 import com.smartagri.modules.warning.enums.WarningStatusEnum;
+import com.smartagri.modules.warning.mapper.WarningMapper;
 import com.smartagri.modules.warning.service.WarningService;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -51,6 +51,7 @@ public class DashboardServiceImpl implements DashboardService {
     private final DeviceService deviceService;
     private final EnvironmentDataService environmentDataService;
     private final WarningService warningService;
+    private final WarningMapper warningMapper;
     private final InspectionTaskService inspectionTaskService;
 
     public DashboardServiceImpl(FieldService fieldService,
@@ -58,12 +59,14 @@ public class DashboardServiceImpl implements DashboardService {
                                 DeviceService deviceService,
                                 EnvironmentDataService environmentDataService,
                                 WarningService warningService,
+                                WarningMapper warningMapper,
                                 InspectionTaskService inspectionTaskService) {
         this.fieldService = fieldService;
         this.cropService = cropService;
         this.deviceService = deviceService;
         this.environmentDataService = environmentDataService;
         this.warningService = warningService;
+        this.warningMapper = warningMapper;
         this.inspectionTaskService = inspectionTaskService;
     }
 
@@ -85,23 +88,14 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardSummaryVO getSummary() {
-        List<WarningRecord> warningList = listWarningsByLatestOrder();
-        LocalDate latestBizDate = warningList.isEmpty() ? LocalDate.now() : resolveWarningDate(warningList.get(0));
-        List<WarningRecord> todayWarnings = warningList.stream()
-                .filter(item -> latestBizDate.equals(resolveWarningDate(item)))
-                .toList();
+        LocalDate latestBizDate = resolveLatestWarningDate();
+        WarningMapper.DailySummary dailySummary = warningMapper.selectDailySummary(
+                latestBizDate.atStartOfDay(), latestBizDate.plusDays(1).atStartOfDay());
 
-        long todayWarningCount = todayWarnings.size();
-        long highRiskWarningCount = todayWarnings.stream()
-                .filter(item -> Objects.equals(item.getLevel(), WarningLevelEnum.HIGH.getCode()))
-                .count();
-        long pendingWarningCount = todayWarnings.stream()
-                .filter(item -> Objects.equals(item.getStatus(), WarningStatusEnum.TO_CONFIRM.getCode())
-                        || Objects.equals(item.getStatus(), WarningStatusEnum.PROCESSING.getCode()))
-                .count();
-        long closedWarningCount = todayWarnings.stream()
-                .filter(item -> Objects.equals(item.getStatus(), WarningStatusEnum.CLOSED_LOOP.getCode()))
-                .count();
+        long todayWarningCount = dailySummary == null ? 0L : nullToZero(dailySummary.getTotal());
+        long highRiskWarningCount = dailySummary == null ? 0L : nullToZero(dailySummary.getHighRisk());
+        long pendingWarningCount = dailySummary == null ? 0L : nullToZero(dailySummary.getPending());
+        long closedWarningCount = dailySummary == null ? 0L : nullToZero(dailySummary.getClosed());
 
         BigDecimal closureRate = BigDecimal.ZERO;
         if (todayWarningCount > 0) {
@@ -109,7 +103,8 @@ public class DashboardServiceImpl implements DashboardService {
                     .setScale(1, RoundingMode.HALF_UP);
         }
 
-        long avgClosureMinutes = calculateAvgClosureMinutes(warningList);
+        Double avgClosureMinutes = warningMapper.selectAvgClosureMinutes();
+        long avgClosureMinutesValue = avgClosureMinutes == null ? 0L : Math.round(avgClosureMinutes);
 
         return DashboardSummaryVO.builder()
                 .farmlandCount(fieldService.count())
@@ -120,19 +115,19 @@ public class DashboardServiceImpl implements DashboardService {
                 .pendingWarningCount(pendingWarningCount)
                 .closedWarningCount(closedWarningCount)
                 .closureRate(closureRate)
-                .avgClosureMinutes(avgClosureMinutes)
+                .avgClosureMinutes(avgClosureMinutesValue)
                 .build();
     }
 
     @Override
     public List<DashboardNameValueVO> getFarmlandStatusStats() {
-        Map<Integer, Long> countMap = fieldService.list().stream()
-                .collect(Collectors.groupingBy(Field::getStatus, Collectors.counting()));
-
         return List.of(
-                new DashboardNameValueVO("闲置", countMap.getOrDefault(0, 0L)),
-                new DashboardNameValueVO("种植中", countMap.getOrDefault(1, 0L)),
-                new DashboardNameValueVO("维护中", countMap.getOrDefault(2, 0L))
+                new DashboardNameValueVO("闲置", fieldService.count(
+                        new LambdaQueryWrapper<Field>().eq(Field::getStatus, 0))),
+                new DashboardNameValueVO("种植中", fieldService.count(
+                        new LambdaQueryWrapper<Field>().eq(Field::getStatus, 1))),
+                new DashboardNameValueVO("维护中", fieldService.count(
+                        new LambdaQueryWrapper<Field>().eq(Field::getStatus, 2)))
         );
     }
 
@@ -187,26 +182,29 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public List<DashboardNameValueVO> getWarningLevelStats() {
-        Map<Integer, Long> countMap = warningService.list().stream()
-                .collect(Collectors.groupingBy(WarningRecord::getLevel, Collectors.counting()));
-
         return List.of(
-                new DashboardNameValueVO("低", countMap.getOrDefault(WarningLevelEnum.LOW.getCode(), 0L)),
-                new DashboardNameValueVO("中", countMap.getOrDefault(WarningLevelEnum.MEDIUM.getCode(), 0L)),
-                new DashboardNameValueVO("高", countMap.getOrDefault(WarningLevelEnum.HIGH.getCode(), 0L))
+                new DashboardNameValueVO("低", countWarningsByLevel(WarningLevelEnum.LOW.getCode())),
+                new DashboardNameValueVO("中", countWarningsByLevel(WarningLevelEnum.MEDIUM.getCode())),
+                new DashboardNameValueVO("高", countWarningsByLevel(WarningLevelEnum.HIGH.getCode()))
         );
     }
 
     @Override
     public List<DashboardNameValueVO> getWarningStatusStats() {
-        Map<Integer, Long> countMap = warningService.list().stream()
-                .collect(Collectors.groupingBy(WarningRecord::getStatus, Collectors.counting()));
         return List.of(
-                new DashboardNameValueVO("待确认", countMap.getOrDefault(WarningStatusEnum.TO_CONFIRM.getCode(), 0L)),
-                new DashboardNameValueVO("处理中", countMap.getOrDefault(WarningStatusEnum.PROCESSING.getCode(), 0L)),
-                new DashboardNameValueVO("已处理", countMap.getOrDefault(WarningStatusEnum.HANDLED.getCode(), 0L)),
-                new DashboardNameValueVO("已闭环", countMap.getOrDefault(WarningStatusEnum.CLOSED_LOOP.getCode(), 0L))
+                new DashboardNameValueVO("待确认", countWarningsByStatus(WarningStatusEnum.TO_CONFIRM.getCode())),
+                new DashboardNameValueVO("处理中", countWarningsByStatus(WarningStatusEnum.PROCESSING.getCode())),
+                new DashboardNameValueVO("已处理", countWarningsByStatus(WarningStatusEnum.HANDLED.getCode())),
+                new DashboardNameValueVO("已闭环", countWarningsByStatus(WarningStatusEnum.CLOSED_LOOP.getCode()))
         );
+    }
+
+    private long countWarningsByLevel(Integer level) {
+        return warningService.count(new LambdaQueryWrapper<WarningRecord>().eq(WarningRecord::getLevel, level));
+    }
+
+    private long countWarningsByStatus(Integer status) {
+        return warningService.count(new LambdaQueryWrapper<WarningRecord>().eq(WarningRecord::getStatus, status));
     }
 
     @Override
@@ -276,15 +274,13 @@ public class DashboardServiceImpl implements DashboardService {
 
     @Override
     public DashboardChartVO getClosureTrend() {
-        List<WarningRecord> warningList = listWarningsByLatestOrder();
-        LocalDate endDate = warningList.isEmpty() ? LocalDate.now() : resolveWarningDate(warningList.get(0));
+        LocalDate endDate = resolveLatestWarningDate();
         List<LocalDate> dateRange = buildRecentDays(endDate, 7);
+        LocalDateTime startTime = dateRange.get(0).atStartOfDay();
+        LocalDateTime endTime = endDate.plusDays(1).atStartOfDay();
 
-        Map<LocalDate, List<WarningRecord>> triggerGroup = warningList.stream()
-                .collect(Collectors.groupingBy(this::resolveWarningDate));
-        Map<LocalDate, Long> closedGroup = warningList.stream()
-                .filter(item -> Objects.equals(item.getStatus(), WarningStatusEnum.CLOSED_LOOP.getCode()) && item.getCloseTime() != null)
-                .collect(Collectors.groupingBy(item -> item.getCloseTime().toLocalDate(), Collectors.counting()));
+        Map<LocalDate, Long> triggerGroup = toDailyCountMap(warningMapper.countWarningsByDay(startTime, endTime));
+        Map<LocalDate, Long> closedGroup = toDailyCountMap(warningMapper.countClosedByDay(startTime, endTime));
 
         List<String> xAxis = new ArrayList<>();
         List<BigDecimal> triggerCount = new ArrayList<>();
@@ -293,7 +289,7 @@ public class DashboardServiceImpl implements DashboardService {
 
         for (LocalDate day : dateRange) {
             xAxis.add(day.format(DAY_FORMATTER));
-            long trigger = triggerGroup.getOrDefault(day, List.of()).size();
+            long trigger = triggerGroup.getOrDefault(day, 0L);
             long closed = closedGroup.getOrDefault(day, 0L);
             BigDecimal rate = trigger == 0
                     ? BigDecimal.ZERO
@@ -313,34 +309,25 @@ public class DashboardServiceImpl implements DashboardService {
                 .build();
     }
 
-    private List<WarningRecord> listWarningsByLatestOrder() {
-        return warningService.list(new LambdaQueryWrapper<WarningRecord>()
-                .orderByDesc(WarningRecord::getTriggerTime)
-                .orderByDesc(WarningRecord::getCreateTime)
-                .orderByDesc(WarningRecord::getId));
+    private LocalDate resolveLatestWarningDate() {
+        LocalDateTime latestTime = warningMapper.selectLatestWarningTime();
+        return latestTime == null ? LocalDate.now() : latestTime.toLocalDate();
     }
 
-    private long calculateAvgClosureMinutes(List<WarningRecord> warningList) {
-        List<Long> durations = warningList.stream()
-                .filter(item -> Objects.equals(item.getStatus(), WarningStatusEnum.CLOSED_LOOP.getCode()))
-                .filter(item -> item.getTriggerTime() != null && item.getCloseTime() != null)
-                .map(item -> Math.max(0, Duration.between(item.getTriggerTime(), item.getCloseTime()).toMinutes()))
-                .toList();
-        if (durations.isEmpty()) {
-            return 0L;
+    private Map<LocalDate, Long> toDailyCountMap(List<WarningMapper.DailyCount> dailyCountList) {
+        if (dailyCountList == null || dailyCountList.isEmpty()) {
+            return Collections.emptyMap();
         }
-        long total = durations.stream().mapToLong(Long::longValue).sum();
-        return Math.round(total * 1.0 / durations.size());
+        return dailyCountList.stream()
+                .filter(item -> item.getBizDate() != null)
+                .collect(Collectors.toMap(
+                        WarningMapper.DailyCount::getBizDate,
+                        item -> nullToZero(item.getCnt()),
+                        Long::sum));
     }
 
-    private LocalDate resolveWarningDate(WarningRecord warningRecord) {
-        if (warningRecord.getTriggerTime() != null) {
-            return warningRecord.getTriggerTime().toLocalDate();
-        }
-        if (warningRecord.getCreateTime() != null) {
-            return warningRecord.getCreateTime().toLocalDate();
-        }
-        return LocalDate.now();
+    private long nullToZero(Long value) {
+        return value == null ? 0L : value;
     }
 
     private LocalDate getLatestEnvironmentDate() {

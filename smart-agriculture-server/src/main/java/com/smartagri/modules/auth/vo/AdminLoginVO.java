@@ -1,5 +1,7 @@
 package com.smartagri.modules.auth.vo;
 
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Builder;
 import lombok.Data;
@@ -7,6 +9,7 @@ import lombok.Data;
 @Data
 @Builder
 @Schema(description = "管理员登录返回结果")
+@JsonNaming(PropertyNamingStrategies.LowerCamelCaseStrategy.class)
 public class AdminLoginVO {
 
     @Schema(description = "JWT 登录令牌")

@@ -17,4 +17,5 @@ smart-agri:
   jwt:
     secret-key: "请填写至少 32 字符的随机串作为 JWT 密钥"
   knowledge-graph:
-    neo4j-password: "请与 Neo4j 实例或 docker-compose 中密码一致"
+    # 与 docker-compose NEO4J_AUTH、.env 中 NEO4J_PASSWORD 一致；全栈默认 changeme-neo4j-dev-only
+    neo4j-password: "changeme-neo4j-dev-only"

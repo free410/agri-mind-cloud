@@ -2,13 +2,11 @@
   <div class="page-shell ai-rag-page">
     <section class="ai-rag-header">
       <div class="ai-rag-header__main">
-        <h1>AI 助手</h1>
-        <p>支持业务数据联动问答、农业知识检索与混合分析。</p>
-        <p class="ai-rag-header__graph-hint">
-          <strong>知识图谱</strong>：后端会将问题与 Neo4j 中实体做匹配，把命中实体写入模型上下文。需在「知识网络」中完成灌库；提问尽量包含作物/病害等名称（如「番茄晚疫病」）。命中时回答内会出现绿色「图谱实体」并可跳转查看子图。
-        </p>
+        <span class="page-banner__badge">RAG 联合问答</span>
+        <p>业务数据 + 知识库 + 知识图谱联合问答，回答下方会标注来源与可信度。</p>
       </div>
       <div class="ai-rag-header__meta">
+        <el-button type="primary" plain :icon="Upload" @click="uploadDialogVisible = true">上传资料</el-button>
         <el-tag type="success" effect="plain">AI 在线</el-tag>
         <el-tag effect="plain">{{ modeLabelMap[currentMode] }}</el-tag>
         <el-tag v-if="latestWarning?.warningNo" type="warning" effect="plain">
@@ -16,6 +14,83 @@
         </el-tag>
       </div>
     </section>
+
+    <el-dialog
+      v-model="uploadDialogVisible"
+      title="知识库管理"
+      width="760px"
+      @closed="resetUpload"
+    >
+      <el-form label-width="80px">
+        <el-form-item label="资料类型">
+          <el-select v-model="uploadCategory" style="width: 100%">
+            <el-option label="作物种植 / 水肥管理" value="crop" />
+            <el-option label="病虫害 / 技术资料" value="tech" />
+            <el-option label="标准作业流程 SOP" value="sop" />
+            <el-option label="设备说明" value="device" />
+            <el-option label="通用农技基础" value="base" />
+          </el-select>
+        </el-form-item>
+        <el-form-item label="文件">
+          <el-upload
+            v-model:file-list="uploadFileList"
+            drag
+            :auto-upload="false"
+            :limit="1"
+            accept=".md,.txt,.json,.pdf,.docx"
+          >
+            <el-icon class="el-icon--upload"><UploadFilled /></el-icon>
+            <div class="el-upload__text">拖拽文件到此处，或<em>点击选择</em></div>
+            <template #tip>
+              <div class="el-upload__tip">
+                支持 .md / .txt / .json / .pdf / .docx，单文件不超过 20MB；上传后自动切片并写入向量库
+              </div>
+            </template>
+          </el-upload>
+        </el-form-item>
+      </el-form>
+      <el-alert
+        v-if="uploadResult"
+        type="success"
+        :closable="false"
+        show-icon
+        :title="`已入库：${uploadResult.file_name || ''}`"
+        :description="`本次共索引 ${uploadResult.chunk_count ?? 0} 个切片，向量库现有 ${uploadResult.upserted_count ?? 0} 条，可以直接在下方提问验证`"
+      />
+      <el-divider content-position="left">已有文档（{{ knowledgeDocuments.length }}）</el-divider>
+      <el-table
+        v-loading="documentsLoading"
+        :data="knowledgeDocuments"
+        size="small"
+        max-height="260"
+        empty-text="知识库暂无文档"
+      >
+        <el-table-column prop="path" label="文档" min-width="220" show-overflow-tooltip />
+        <el-table-column prop="category" label="类型" width="90" />
+        <el-table-column label="大小" width="90">
+          <template #default="{ row }">{{ formatFileSize(row.size_bytes) }}</template>
+        </el-table-column>
+        <el-table-column label="向量数" width="90">
+          <template #default="{ row }">{{ row.vector_count }}</template>
+        </el-table-column>
+        <el-table-column label="操作" width="80" fixed="right">
+          <template #default="{ row }">
+            <el-button link type="danger" @click="removeKnowledgeDocument(row)">删除</el-button>
+          </template>
+        </el-table-column>
+      </el-table>
+      <template #footer>
+        <el-button @click="uploadDialogVisible = false">取消</el-button>
+        <el-button
+          type="primary"
+          :loading="uploading"
+          :disabled="!uploadFileList.length"
+          @click="submitUpload"
+        >
+          开始上传
+        </el-button>
+      </template>
+    </el-dialog>
 
     <section class="page-content-card ai-rag-workspace">
       <div ref="messageContainerRef" class="ai-rag-dialogue">
@@ -58,261 +133,163 @@
 
             <div class="chat-item__bubble">
               <p v-if="message.content && !message.structured" class="chat-item__text">
-                <TypewriterText
-                  :text="message.content"
-                  :active="isPlainStreaming(message)"
-                  @complete="onPlainStreamComplete"
-                  @progress="scrollToBottom"
-                />
+                {{ stripMarkdown(message.content) }}
               </p>
 
-              <section
-                v-if="message.structured"
-                :class="['rag-answer-v2', 'rag-answer-dash', priorityShellClass(message.structured.priority)]"
-              >
-                <header class="rag-dash__masthead rag-dash__masthead--compact">
-                  <div class="rag-dash__masthead-left">
-                    <div class="rag-dash__logo rag-dash__logo--sm" aria-hidden="true">
-                      <el-icon :size="20"><DataAnalysis /></el-icon>
-                    </div>
-                    <div class="rag-dash__masthead-text">
-                      <div class="rag-dash__title-row">
-                        <span class="rag-dash__badge">简报</span>
-                        <span class="rag-dash__mode">{{ message.structured.title }}</span>
-                        <span class="rag-dash__time">{{ message.time }}</span>
-                      </div>
-                      <div class="rag-dash__masthead-inline">
-                        <el-tag :type="priorityTagType(message.structured.priority)" size="small" effect="dark">
-                          {{ priorityLabel(message.structured.priority) }}
-                        </el-tag>
-                        <el-tag
-                          :type="message.structured.shouldManualReview ? 'danger' : 'success'"
-                          size="small"
-                          effect="plain"
-                        >
-                          {{ message.structured.shouldManualReview ? '需复核' : '可自闭环' }}
-                        </el-tag>
-                        <el-tag v-if="message.structured.fallback" type="warning" size="small">兜底</el-tag>
-                        <span class="rag-dash__urgency-inline">
-                          紧急度
-                          <strong :style="{ color: priorityBarColor(message.structured.priority) }">
-                            {{ priorityUrgencyPercent(message.structured.priority) }}%
-                          </strong>
-                        </span>
-                      </div>
-                    </div>
-                  </div>
+              <section v-if="message.structured" class="rag-answer-min">
+                <header class="rag-answer-min__head">
+                  <span class="rag-answer-min__head-label">
+                    <el-icon class="rag-answer-min__head-ic"><Reading /></el-icon>
+                    回答正文
+                  </span>
+                  <el-button type="primary" link size="small" @click="copyRagDigest(message.structured)">
+                    <el-icon class="rag-answer-min__ic"><CopyDocument /></el-icon>
+                    复制全文
+                  </el-button>
                 </header>
 
-                <!-- 核心阅览区：摘要与结论视觉上集中靠前，叙述顺序仍为 ① 摘要 → ② 结论 -->
-                <div class="rag-dash__focal">
+                <div class="rag-answer-min__prose">
                   <p
-                    v-if="openingHighlightLine(message.structured) && !isStreamingSummary(message)"
-                    class="rag-dash__focal-pull"
+                    v-for="(para, pIdx) in answerParagraphs(message.structured.answerSummary)"
+                    :key="`${message.id}-ap-${pIdx}`"
+                    class="rag-answer-min__para"
                   >
-                    {{ openingHighlightLine(message.structured) }}
+                    {{ para }}
                   </p>
-                  <div class="rag-answer-v2__hero rag-dash__hero rag-dash__hero--inset">
-                    <div class="rag-dash__hero-bar">
-                      <p class="rag-answer-v2__hero-label">① 先读这一段（执行摘要）</p>
-                      <el-button type="primary" link size="small" @click="copyRagDigest(message.structured)">
-                        <el-icon class="rag-dash__btn-ic"><CopyDocument /></el-icon>
-                        复制全文要点
-                      </el-button>
-                    </div>
-                    <p
-                      class="rag-answer-v2__lead"
-                      :class="{
-                        'rag-answer-v2__lead--compact':
-                          openingHighlightLine(message.structured) && !isStreamingSummary(message)
-                      }"
+                </div>
+
+                <aside
+                  v-if="showSeparateConclusion(message.structured)"
+                  class="rag-answer-min__conclusion-card"
+                >
+                  <div class="rag-answer-min__conclusion-card__hd">要点小结</div>
+                  <p class="rag-answer-min__conclusion-card__body">{{ stripMarkdown(message.structured.conclusion) }}</p>
+                </aside>
+
+                <div
+                  v-if="message.structured"
+                  class="rag-answer-min__meta-panel"
+                >
+                  <div class="rag-answer-min__meta-panel__title">
+                    <el-icon><DataLine /></el-icon>
+                    检索与可信度
+                  </div>
+                  <div class="rag-answer-min__meta-panel__tags">
+                    <el-tag v-if="message.structured.shouldManualReview" type="warning" size="small" effect="dark">
+                      建议人工复核
+                    </el-tag>
+                    <el-tag v-if="message.structured.fallbackReason" type="warning" size="small" effect="plain">
+                      兜底模式
+                    </el-tag>
+                    <el-tag v-if="message.structured.priority" type="info" size="small" effect="plain">
+                      优先级 {{ message.structured.priority }}
+                    </el-tag>
+                    <el-tag
+                      :type="retrievalScoreTagType(firstKnowledgeScore(message))"
+                      size="small"
+                      effect="plain"
+                      class="rag-answer-min__score-tag"
                     >
-                      <TypewriterText
-                        :text="message.structured.answerSummary"
-                        :active="isStreamingSummary(message)"
-                        @complete="onSummaryStreamComplete"
-                        @progress="scrollToBottom"
-                      />
-                    </p>
-                    <div
-                      v-if="showSeparateConclusion(message.structured)"
-                      class="rag-answer-v2__conclusion"
-                    >
-                      <p class="rag-answer-v2__conclusion-label">② 核心结论</p>
-                      <p class="rag-answer-v2__conclusion-text">
-                        <TypewriterText
-                          :text="message.structured.conclusion"
-                          :active="isStreamingConclusion(message)"
-                          @complete="onConclusionStreamComplete"
-                          @progress="scrollToBottom"
-                        />
-                      </p>
-                    </div>
+                      向量相似度 {{ formatRetrievalScore(firstKnowledgeScore(message)) }}
+                    </el-tag>
                   </div>
                 </div>
 
-                <!-- KPI 与业务快照合并为一块「信号面板」，避免上下两段样式割裂；网格固定 3 列避免宽屏 4+2 留白 -->
-                <div class="rag-dash__signals-panel">
-                  <div class="rag-dash__signals-panel-kpis">
-                    <div class="rag-dash__evidence rag-dash__evidence--panel">
-                      <div class="rag-dash__evidence-item">
-                        <span class="rag-dash__evidence-n">{{ ragEvidenceCounts(message.structured).biz }}</span>
-                        <span class="rag-dash__evidence-t">业务信号</span>
-                      </div>
-                      <div class="rag-dash__evidence-item">
-                        <span class="rag-dash__evidence-n">{{ ragEvidenceCounts(message.structured).kb }}</span>
-                        <span class="rag-dash__evidence-t">知识引用</span>
-                      </div>
-                      <div class="rag-dash__evidence-item">
-                        <span class="rag-dash__evidence-n">{{ ragEvidenceCounts(message.structured).kg }}</span>
-                        <span class="rag-dash__evidence-t">图谱实体</span>
-                      </div>
-                    </div>
+                <footer
+                  v-if="resolvedSingleSource(message.structured)"
+                  class="rag-answer-min__source-foot"
+                >
+                  <el-icon class="rag-answer-min__source-foot__ic"><Document /></el-icon>
+                  <div class="rag-answer-min__source-foot__main">
+                    <span class="rag-answer-min__source-foot__label">参考来源</span>
+                    <span class="rag-answer-min__source-foot__text">{{
+                      resolvedSingleSource(message.structured).display
+                    }}</span>
                   </div>
-
-                  <div
-                    v-if="message.structured.businessCitation?.summaryBlocks?.length"
-                    class="rag-dash__biz-snapshot rag-dash__biz-snapshot--panel"
-                  >
-                    <h4 class="rag-dash__section-title rag-dash__section-title--tight">
-                      <span class="rag-dash__section-icon">◇</span>
-                      业务快照
-                      <span class="rag-dash__biz-snapshot-hint">来自当前业务上下文</span>
-                    </h4>
-                    <div class="rag-dash__biz-grid">
-                      <div
-                        v-for="(block, bidx) in message.structured.businessCitation.summaryBlocks.slice(0, 6)"
-                        :key="`snap-${bidx}`"
-                        class="rag-dash__biz-card"
-                      >
-                        {{ block }}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div v-if="message.structured.recommendations?.length" class="rag-dash__timeline-wrap">
-                  <h4 class="rag-dash__section-title rag-dash__section-title--accent">
-                    <span class="rag-dash__section-icon">▶</span>
-                    建议执行路径
-                  </h4>
-                  <ol class="rag-dash__timeline">
-                    <li
-                      v-for="(item, idx) in message.structured.recommendations"
-                      :key="`r-${idx}`"
-                      class="rag-dash__timeline-item"
-                    >
-                      <span class="rag-dash__timeline-idx">{{ idx + 1 }}</span>
-                      <p class="rag-dash__timeline-body">{{ item }}</p>
-                    </li>
-                  </ol>
-                </div>
-
-                <div v-if="message.structured.possibleCauses?.length" class="rag-dash__causes">
-                  <h4 class="rag-dash__section-title">
-                    <el-icon class="rag-dash__section-ic" :size="16"><WarningFilled /></el-icon>
-                    可能原因 · 排查树
-                  </h4>
-                  <ul class="rag-dash__cause-list">
-                    <li v-for="(item, idx) in message.structured.possibleCauses" :key="`c-${idx}`">
-                      {{ item }}
-                    </li>
-                  </ul>
-                </div>
-
-                <div v-if="message.structured.graphSources?.length" class="rag-answer-v2__graph-strip">
-                  <div class="rag-answer-v2__graph-strip-head">
-                    <el-tag type="success" effect="dark" size="small">知识图谱已联动</el-tag>
-                    <span class="rag-answer-v2__graph-strip-desc">
-                      以下实体已检索并参与本次回答；点击可在「农业知识网络」中以该实体为中心展开子图。
-                    </span>
-                  </div>
-                  <div class="rag-answer-v2__graph-chips">
-                    <button
-                      v-for="(item, idx) in message.structured.graphSources"
-                      :key="`gchip-${idx}-${item.id}`"
-                      type="button"
-                      class="rag-graph-chip"
-                      @click="goKnowledgeGraph(item.id)"
-                    >
-                      <span class="rag-graph-chip__name">{{ item.title }}</span>
-                      <span class="rag-graph-chip__meta">{{ item.kind || '实体' }} · {{ item.id }}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <el-collapse class="rag-answer-v2__collapse" accordion>
-                  <el-collapse-item
+                  <el-button
                     v-if="
-                      message.structured.businessCitation?.summaryBlocks?.length ||
-                      message.structured.businessCitation?.riskSignals?.length
+                      resolvedSingleSource(message.structured).graphId &&
+                      !message.structured.graphSources?.length
                     "
-                    title="业务数据明细（预警 / 设备 / 农田等）"
-                    name="biz"
+                    type="primary"
+                    size="small"
+                    plain
+                    round
+                    class="rag-answer-min__graph-pill"
+                    @click="goKnowledgeGraph(resolvedSingleSource(message.structured).graphId)"
                   >
-                    <div class="rag-answer-v2__collapse-body">
-                      <div class="rag-answer-v2__chips">
-                        <span
-                          v-for="item in message.structured.businessCitation?.summaryBlocks || []"
-                          :key="item"
-                          class="rag-answer-v2__chip"
-                        >
-                          {{ item }}
-                        </span>
-                      </div>
-                      <ul
-                        v-if="message.structured.businessCitation?.riskSignals?.length"
-                        class="rag-answer-v2__risk-list"
-                      >
-                        <li
-                          v-for="item in message.structured.businessCitation.riskSignals"
-                          :key="item"
-                        >
-                          {{ item }}
-                        </li>
-                      </ul>
-                    </div>
-                  </el-collapse-item>
-
-                  <el-collapse-item
-                    v-if="message.structured.knowledgeSources?.length"
-                    :title="`知识库参考（已去重，共 ${message.structured.knowledgeSources.length} 条）`"
-                    name="kb"
-                  >
-                    <p class="rag-answer-v2__kb-hint">
-                      以下为向量检索命中的文档片段，<strong>不一定与当前问题强相关</strong>；请优先以「先读这一段」与「建议怎么做」为准。
-                    </p>
-                    <ul class="rag-answer-v2__kb-list rag-dash__kb-list">
-                      <li
-                        v-for="(item, idx) in message.structured.knowledgeSources"
-                        :key="`k-${idx}-${item.id}-${item.title}`"
-                        class="rag-dash__kb-row"
-                      >
-                        <div class="rag-dash__kb-main">
-                          <span class="rag-answer-v2__kb-title">{{ item.title }}</span>
-                          <span class="rag-answer-v2__kb-meta">{{ formatTopic(item.topic) }} · {{ item.source }}</span>
-                        </div>
-                        <div v-if="formatKnowledgeScore(item.score) != null" class="rag-dash__kb-score">
-                          <el-progress
-                            :percentage="formatKnowledgeScore(item.score)"
-                            :stroke-width="5"
-                            :show-text="false"
-                            color="#1c9266"
-                          />
-                          <span class="rag-dash__kb-score-txt">相关度 {{ formatKnowledgeScore(item.score) }}%</span>
-                        </div>
-                      </li>
-                    </ul>
-                  </el-collapse-item>
-
-                </el-collapse>
-
-                <footer class="rag-dash__footer">
-                  <span class="rag-dash__footer-brand">智慧农业 · 多源融合分析</span>
-                  <span class="rag-dash__footer-disclaimer">输出仅供辅助决策，现场处置请以规程、合同与法规为准。</span>
+                    知识图谱
+                  </el-button>
                 </footer>
 
-                <p v-if="message.structured.fallbackReason" class="rag-answer-v2__fallback">
+                <div v-if="message.structured.graphSources?.length" class="rag-answer-min__kg-strip">
+                  <span class="rag-answer-min__source-label">图谱</span>
+                  <span class="rag-answer-min__kg-strip__hint">本次注入模型的实体（可点击查看详情）</span>
+                  <div class="rag-answer-min__kg-chips">
+                    <el-button
+                      v-for="g in message.structured.graphSources"
+                      :key="`${message.id}-kg-${g.id}`"
+                      type="success"
+                      link
+                      size="small"
+                      @click="goKnowledgeGraph(g.id)"
+                    >
+                      {{ g.title || g.id }}{{ g.kind ? ` · ${g.kind}` : '' }}
+                    </el-button>
+                  </div>
+                  <!-- 迷你知识图谱可视化 - 展示第一个命中的实体子图 -->
+                  <MiniGraph
+                    v-if="getPrimarySubgraph(message.structured)"
+                    :subgraph="getPrimarySubgraph(message.structured)"
+                  />
+                </div>
+
+                <!-- 检索详情下拉框 - 展示所有命中的知识块、重排分数等 -->
+                <div v-if="getRetrievalDetails(message).length" class="rag-answer-min__retrieval-panel">
+                  <el-collapse>
+                    <el-collapse-item title="检索详情（点击展开）" name="retrieval">
+                      <template #title>
+                        <div class="retrieval-panel__title">
+                          <el-icon><Document /></el-icon>
+                          <span>检索详情</span>
+                          <span class="retrieval-panel__count">共 {{ getRetrievalDetails(message).length }} 条命中</span>
+                        </div>
+                      </template>
+                      <div class="retrieval-detail-list">
+                        <div
+                          v-for="(item, idx) in getRetrievalDetails(message)"
+                          :key="`${message.id}-ref-${idx}`"
+                          class="retrieval-detail-item"
+                        >
+                          <div class="retrieval-detail-item__header">
+                            <span class="retrieval-detail-item__index">#{{ idx + 1 }}</span>
+                            <span class="retrieval-detail-item__title">{{ item.title }}</span>
+                            <el-tag :type="getScoreTagType(item.score)" size="small" effect="plain">
+                              向量相似度 {{ item.score?.toFixed(4) || '--' }}
+                            </el-tag>
+                            <el-tag v-if="item.rerankScore != null" type="warning" size="small" effect="plain">
+                              重排分数 {{ item.rerankScore?.toFixed(4) }}
+                            </el-tag>
+                          </div>
+                          <div class="retrieval-detail-item__source">
+                            <span class="retrieval-detail-item__source-label">来源：</span>
+                            <span class="retrieval-detail-item__source-value">{{ item.source }}</span>
+                          </div>
+                          <div class="retrieval-detail-item__content">
+                            <span class="retrieval-detail-item__content-label">内容摘要：</span>
+                            <span class="retrieval-detail-item__content-text">{{ truncateContent(item.content, 200) }}</span>
+                          </div>
+                          <div v-if="item.metadata?.topic || item.metadata?.domain" class="retrieval-detail-item__meta">
+                            <el-tag v-if="item.metadata?.topic" size="small" type="info">{{ item.metadata.topic }}</el-tag>
+                            <el-tag v-if="item.metadata?.domain" size="small" type="info">{{ item.metadata.domain }}</el-tag>
+                          </div>
+                        </div>
+                      </div>
+                    </el-collapse-item>
+                  </el-collapse>
+                </div>
+
+                <p v-if="message.structured.fallbackReason" class="rag-answer-min__fallback">
                   {{ message.structured.fallbackReason }}
                 </p>
               </section>
@@ -332,25 +309,12 @@
               {{ item.label }}
             </el-radio-button>
           </el-radio-group>
-          <span class="composer-context">{{ contextDescription }}</span>
-        </div>
-
-        <div class="quick-question-row">
-          <button
-            v-for="item in sampleQuestions"
-            :key="`${item.key}-composer`"
-            type="button"
-            class="quick-question-btn"
-            @click="fillSampleQuestion(item)"
-          >
-            {{ item.shortLabel }}
-          </button>
         </div>
 
         <el-input
           v-model="inputText"
           type="textarea"
-          :rows="6"
+          :rows="3"
           resize="none"
           maxlength="1200"
           show-word-limit
@@ -368,15 +332,93 @@
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { nextTick, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
-import { CopyDocument, DataAnalysis, WarningFilled } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
-import { sendAiRagChatApi } from '@/api/ai'
+import { CopyDocument, DataLine, Document, Reading, Upload, UploadFilled } from '@element-plus/icons-vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import {
+  deleteKnowledgeDocumentApi,
+  fetchKnowledgeDocumentsApi,
+  sendAiChatApi,
+  sendAiRagChatApi,
+  uploadKnowledgeApi
+} from '@/api/ai'
 import { getWarningPageApi } from '@/api/warning'
 import { useAiAssistantStore } from '@/stores/aiAssistant'
-import TypewriterText from '@/components/common/TypewriterText.vue'
+import MiniGraph from '@/components/ai/MiniGraph.vue'
+
+const uploadDialogVisible = ref(false)
+const uploading = ref(false)
+const uploadCategory = ref('crop')
+const uploadFileList = ref([])
+const uploadResult = ref(null)
+
+async function submitUpload() {
+  const raw = uploadFileList.value[0]?.raw
+  if (!raw) return
+  uploading.value = true
+  uploadResult.value = null
+  try {
+    uploadResult.value = await uploadKnowledgeApi(raw, uploadCategory.value)
+    ElMessage.success('文档已入库，可以直接提问验证')
+    await loadKnowledgeDocuments()
+  } catch (error) {
+    ElMessage.error(error?.message || '上传失败，请查看后端日志')
+  } finally {
+    uploading.value = false
+  }
+}
+
+function resetUpload() {
+  uploadFileList.value = []
+  uploadResult.value = null
+}
+
+const knowledgeDocuments = ref([])
+const documentsLoading = ref(false)
+
+async function loadKnowledgeDocuments() {
+  documentsLoading.value = true
+  try {
+    const result = await fetchKnowledgeDocumentsApi()
+    knowledgeDocuments.value = result?.items || []
+  } catch (error) {
+    ElMessage.error(error?.message || '加载知识文档失败')
+  } finally {
+    documentsLoading.value = false
+  }
+}
+
+async function removeKnowledgeDocument(row) {
+  try {
+    await ElMessageBox.confirm(
+      `删除后「${row.path}」及其 ${row.vector_count ?? 0} 条向量会同步移除，且不可恢复。`,
+      '确认删除文档',
+      { type: 'warning', confirmButtonText: '删除', cancelButtonText: '取消' }
+    )
+  } catch {
+    return
+  }
+  try {
+    const result = await deleteKnowledgeDocumentApi(row.path)
+    ElMessage.success(`已删除，同步清理 ${result?.deleted_points ?? 0} 条向量`)
+    await loadKnowledgeDocuments()
+  } catch (error) {
+    ElMessage.error(error?.message || '删除失败')
+  }
+}
+
+function formatFileSize(bytes) {
+  const size = Number(bytes) || 0
+  if (size < 1024) return `${size} B`
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`
+  return `${(size / 1024 / 1024).toFixed(1)} MB`
+}
+
+watch(uploadDialogVisible, (visible) => {
+  if (visible) loadKnowledgeDocuments()
+})
 
 const modeOptions = [
   { value: 'auto', label: '自动模式' },
@@ -394,35 +436,55 @@ const modeLabelMap = {
 
 const modeCards = [
   { key: 'business', title: '业务数据 RAG', desc: '读取预警、环境、设备与处理记录上下文。' },
-  { key: 'knowledge', title: '知识库 RAG', desc: '检索农业知识、SOP 与设备说明文档。' },
-  { key: 'hybrid', title: '混合问答', desc: '同时整合业务数据与知识片段生成结构化结论。' }
+  {
+    key: 'knowledge',
+    title: '知识库 RAG',
+    desc: '检索文档片段；同时后端会按问题匹配 Neo4j 实体并注入上下文（与文档并行，非同一数据源）。'
+  },
+  { key: 'hybrid', title: '混合问答', desc: '业务数据 + 知识片段 + 图谱实体摘要一并参与作答。' }
 ]
 
 const sampleQuestions = [
   {
     key: 's1',
     label: '当前最高风险预警是什么？',
-    shortLabel: '最高风险预警',
     mode: 'business'
   },
   {
     key: 's2',
     label: '这条设备离线预警应该怎么处理？',
-    shortLabel: '设备离线处理',
     mode: 'business'
   },
   {
     key: 's3',
     label: '土壤湿度长期偏低有什么农业风险？',
-    shortLabel: '土壤湿度风险',
     mode: 'knowledge'
   },
   {
     key: 's4',
     label: '帮我总结今天的异常情况',
-    shortLabel: '今日异常总结',
     mode: 'hybrid'
+  },
+  {
+    key: 's5',
+    label: '草莓栽培对土壤湿度有什么要求？',
+    mode: 'knowledge'
+  },
+  {
+    key: 's6',
+    label: '番茄晚疫病和番茄早疫病有什么区别？',
+    mode: 'knowledge'
   }
+]
+
+const GENERAL_CHAT_HINT_PATTERNS = [
+  /^(你好|您好|嗨|哈喽|在吗|hello|hi)\s*[!！?？。.]?$/i,
+  /(你是谁|你能做什么|介绍一下你自己|自我介绍)/i,
+  /(今天天气|讲个笑话|闲聊|聊天|陪我聊聊|早上好|晚上好|午安)/i
+]
+
+const AGRI_DOMAIN_HINT_PATTERNS = [
+  /(预警|农田|作物|设备|环境|土壤|湿度|温度|光照|病害|虫害|灌溉|施肥|巡检|闭环|图谱|知识库|RAG|Neo4j|Qdrant)/i
 ]
 
 const router = useRouter()
@@ -440,159 +502,72 @@ const sending = ref(false)
 const inputText = ref('')
 const latestWarning = ref(null)
 
-/** 刚返回的助手消息逐字显示；历史消息 active=false 直接展示全文 */
-const streamingMsgId = ref(null)
-const streamPhase = ref('idle')
-
-const contextDescription = computed(() => {
-  if (currentMode.value === 'knowledge') {
-    return '当前仅检索农业知识库'
+/** 仅保留一条来源：优先知识库首条，否则图谱首条（兼容旧会话无 singleSource） */
+function resolvedSingleSource(structured) {
+  if (!structured) return null
+  if (structured.singleSource?.display) {
+    return {
+      display: structured.singleSource.display,
+      graphId: structured.singleSource.graphId || null
+    }
   }
-  if (latestWarning.value?.warningNo) {
-    return `默认联动预警 ${latestWarning.value.warningNo}`
+  const k = structured.knowledgeSources?.[0]
+  if (k) {
+    const title = String(k.title || '').trim() || '知识片段'
+    const src = String(k.source || '').trim()
+    return { display: src ? `${title} · ${src}` : title, graphId: null }
   }
-  return '当前无默认预警上下文'
-})
-
-function priorityLabel(priority) {
-  if (priority === '高' || priority === 'HIGH') return '高优先级'
-  if (priority === '低' || priority === 'LOW') return '低优先级'
-  return '中优先级'
-}
-
-function priorityTagType(priority) {
-  if (priority === '高' || priority === 'HIGH') return 'danger'
-  if (priority === '低' || priority === 'LOW') return 'success'
-  return 'warning'
-}
-
-function priorityShellClass(priority) {
-  if (priority === '高' || priority === 'HIGH') return 'rag-answer-v2--pri-high'
-  if (priority === '低' || priority === 'LOW') return 'rag-answer-v2--pri-low'
-  return 'rag-answer-v2--pri-mid'
-}
-
-function priorityUrgencyPercent(priority) {
-  if (priority === '高' || priority === 'HIGH') return 90
-  if (priority === '低' || priority === 'LOW') return 26
-  return 55
-}
-
-function priorityBarColor(priority) {
-  if (priority === '高' || priority === 'HIGH') return '#f56c6c'
-  if (priority === '低' || priority === 'LOW') return '#67c23a'
-  return '#e6a23c'
-}
-
-function ragEvidenceCounts(structured) {
-  const bizBlocks = structured?.businessCitation?.summaryBlocks?.length ?? 0
-  const bizRisk = structured?.businessCitation?.riskSignals?.length ?? 0
-  return {
-    biz: bizBlocks + bizRisk,
-    kb: structured?.knowledgeSources?.length ?? 0,
-    kg: structured?.graphSources?.length ?? 0
+  const g = structured.graphSources?.[0]
+  if (g) {
+    const title = String(g.title || '').trim() || '知识图谱实体'
+    const id = g.id != null && g.id !== '' ? String(g.id) : ''
+    return { display: id ? `${title} · ${id}` : title, graphId: id || null }
   }
+  return null
 }
 
-function formatKnowledgeScore(score) {
-  if (score == null || score === '') return null
-  const n = Number(score)
-  if (Number.isNaN(n)) return null
-  return n <= 1 ? Math.round(n * 100) : Math.round(Math.min(n, 100))
+function buildSingleSourceFromRefs(knowledgeList, graphList) {
+  const k = knowledgeList[0]
+  if (k) {
+    const title = String(k.title || '').trim() || '知识片段'
+    const src = String(k.source || '').trim()
+    return { display: src ? `${title} · ${src}` : title, graphId: null }
+  }
+  const g = graphList[0]
+  if (g) {
+    const title = String(g.title || '').trim() || '知识图谱实体'
+    const id = g.id != null && g.id !== '' ? String(g.id) : ''
+    return { display: id ? `${title} · ${id}` : title, graphId: id || null }
+  }
+  return null
 }
 
 async function copyRagDigest(structured) {
   const parts = []
-  parts.push('—— 智慧农业 · AI 分析简报 ——', '')
-  parts.push(structured.title || '', '')
-  parts.push('【摘要】', structured.answerSummary || '', '')
-  if (showSeparateConclusion(structured)) {
-    parts.push('【核心结论】', structured.conclusion, '')
+  if (structured.answerSummary) parts.push(structured.answerSummary, '')
+  if (showSeparateConclusion(structured) && structured.conclusion) {
+    parts.push(structured.conclusion, '')
   }
-  if (structured.recommendations?.length) {
-    parts.push('【建议步骤】')
-    structured.recommendations.forEach((t, i) => parts.push(`${i + 1}. ${t}`))
-    parts.push('')
-  }
-  if (structured.possibleCauses?.length) {
-    parts.push('【可能原因】')
-    structured.possibleCauses.forEach((t) => parts.push(`· ${t}`))
+  const src = resolvedSingleSource(structured)
+  if (src?.display) parts.push(`来源：${src.display}`)
+  if (structured.graphSources?.length) {
+    parts.push(
+      '',
+      `图谱实体：${structured.graphSources.map((g) => g.title || g.id).join('、')}`
+    )
   }
   try {
-    await navigator.clipboard.writeText(parts.join('\n'))
-    ElMessage.success('已复制简报要点')
+    await navigator.clipboard.writeText(parts.join('\n').trim())
+    ElMessage.success('已复制')
   } catch {
     ElMessage.warning('复制失败，请手动选择文本')
   }
-}
-
-function formatTopic(topic) {
-  if (!topic) return '知识片段'
-  const topicMap = {
-    warning: '预警知识',
-    irrigation: '灌溉知识',
-    humidity: '湿度知识',
-    device: '设备文档',
-    crop: '作物知识'
-  }
-  return topicMap[topic] || topic
 }
 
 function appendMessage(role, content, structured = null) {
   const id = aiAssistantStore.appendMessage(role, content, structured)
   scrollToBottom()
   return id
-}
-
-function isStreamingSummary(message) {
-  return (
-    message.role === 'assistant' &&
-    message.id === streamingMsgId.value &&
-    streamPhase.value === 'summary'
-  )
-}
-
-function isStreamingConclusion(message) {
-  return (
-    message.role === 'assistant' &&
-    message.id === streamingMsgId.value &&
-    streamPhase.value === 'conclusion'
-  )
-}
-
-function isPlainStreaming(message) {
-  return (
-    message.role === 'assistant' &&
-    message.id === streamingMsgId.value &&
-    streamPhase.value === 'plain'
-  )
-}
-
-function onSummaryStreamComplete() {
-  if (streamPhase.value !== 'summary') return
-  const mid = streamingMsgId.value
-  const m = messages.value.find((x) => x.id === mid)
-  if (m?.structured && showSeparateConclusion(m.structured)) {
-    streamPhase.value = 'conclusion'
-  } else {
-    streamingMsgId.value = null
-    streamPhase.value = 'idle'
-  }
-  scrollToBottom()
-}
-
-function onConclusionStreamComplete() {
-  if (streamPhase.value !== 'conclusion') return
-  streamingMsgId.value = null
-  streamPhase.value = 'idle'
-  scrollToBottom()
-}
-
-function onPlainStreamComplete() {
-  if (streamPhase.value !== 'plain') return
-  streamingMsgId.value = null
-  streamPhase.value = 'idle'
-  scrollToBottom()
 }
 
 function scrollToBottom() {
@@ -634,48 +609,246 @@ function showSeparateConclusion(structured) {
   return !conclusionMergedIntoSummary(structured.answerSummary, structured.conclusion)
 }
 
-/** 摘要较长时提取首句「划重点」，置顶显示但不改变正文顺序与全文 */
-function openingHighlightLine(structured) {
-  const full = (structured?.answerSummary || '').trim().replace(/\s+/g, ' ')
-  if (full.length < 72) return ''
-  let end = -1
-  for (const ch of '。；！？') {
-    const i = full.indexOf(ch)
-    if (i >= 20 && (end < 0 || i < end)) end = i
-  }
-  if (end < 20) return ''
-  const first = full.slice(0, end + 1).trim()
-  if (first.length >= full.length * 0.92) return ''
-  return first
+/** 获取第一个有子图数据的图谱来源，用于迷你图谱展示 */
+function getPrimarySubgraph(structured) {
+  if (!structured?.graphSources?.length) return null
+  const primary = structured.graphSources.find(g => g.subgraph?.nodes?.length > 0)
+  return primary?.subgraph || null
 }
 
-function normalizeStructuredResponse(response) {
+function normalizeStructuredResponse(response, ragMode) {
   const answerSummary = response.answerSummary || '已完成结构化分析'
   const conclusion = response.conclusion || ''
-  const knowledgeSources = dedupeByKey(
+  const knowledgeDeduped = dedupeByKey(
     Array.isArray(response.citedKnowledgeSources) ? response.citedKnowledgeSources : [],
     (i) => `${i?.id ?? ''}|${i?.title ?? ''}|${i?.source ?? ''}`
   )
-  const graphSources = dedupeByKey(
+  // 图谱去重时保留 subgraph 数据
+  const graphDeduped = dedupeByKeyWithExtra(
     Array.isArray(response.citedKnowledgeGraph) ? response.citedKnowledgeGraph : [],
     (i) => `${i?.id ?? ''}|${i?.title ?? ''}`
   )
+  const modeKey = ragMode || currentMode.value
+  const singleSource = buildSingleSourceFromRefs(knowledgeDeduped, graphDeduped)
 
   return {
-    title: `${modeLabelMap[currentMode.value]}结果`,
+    title: `${modeLabelMap[modeKey] || '分析'}结果`,
+    questionType: response.questionType || response.question_type || '',
+    ragMode: modeKey,
     answerSummary,
     conclusion,
     conclusionMergedIntoSummary: conclusionMergedIntoSummary(answerSummary, conclusion),
-    possibleCauses: Array.isArray(response.possibleCauses) ? response.possibleCauses : [],
-    recommendations: Array.isArray(response.recommendations) ? response.recommendations : [],
-    priority: response.priority || '中',
-    shouldManualReview: Boolean(response.shouldManualReview),
+    singleSource,
+    knowledgeSources: knowledgeDeduped,
+    graphSources: graphDeduped,
     fallback: Boolean(response.fallback),
     fallbackReason: response.fallbackReason || '',
-    businessCitation: response.citedBusinessContext || null,
-    knowledgeSources,
-    graphSources
+    shouldManualReview: Boolean(response.shouldManualReview),
+    priority: response.priority || '',
+    // 保留原始数据用于检索详情展示
+    citedKnowledgeSources: response.citedKnowledgeSources || [],
+    retrievalMetadata: response.retrievalMetadata || null,
+    // 保留完整的 references 列表（包含 content）
+    references: response.references || [],
+    // 保留业务上下文
+    citedBusinessContext: response.citedBusinessContext || null,
   }
+}
+
+/** 去重并保留额外字段（如 subgraph） */
+function dedupeByKeyWithExtra(list, keyFn) {
+  if (!Array.isArray(list)) return []
+  const seen = new Map()
+  for (const item of list) {
+    const k = keyFn(item)
+    if (!seen.has(k)) {
+      seen.set(k, item)
+    }
+  }
+  return [...seen.values()]
+}
+
+/** 向量库返回的相似度分数（与问题 embedding 接近程度），非「事实正确率」 */
+function firstKnowledgeScore(message) {
+  // 支持传入 structured 对象或整个 message 对象
+  const structured = message?.structured ?? message
+  if (!structured) return null
+
+  // 来源1：直接从 citedKnowledgeSources 取（API 原名字段，最优先）
+  const apiKs = message?.citedKnowledgeSources
+  if (Array.isArray(apiKs) && apiKs.length > 0) {
+    const s = apiKs[0]?.score
+    // 允许 0.0 值（表示检索到但相似度极低）
+    if (s != null) {
+      const n = Number(s)
+      if (Number.isFinite(n)) return n
+    }
+  }
+
+  // 来源2：从 knowledgeSources 取（转换后的结构化字段）
+  const list = structured.knowledgeSources
+  if (Array.isArray(list) && list.length > 0) {
+    const s = list[0]?.score
+    if (s != null) {
+      const n = Number(s)
+      if (Number.isFinite(n)) return n
+    }
+  }
+
+  // 来源3：从 retrievalMetadata 取 max_score（后端返回的统计信息）
+  const meta = structured.retrievalMetadata
+  if (meta && typeof meta === 'object') {
+    // 尝试多种可能的字段名
+    const s = meta.maxScore ?? meta.max_score ?? meta.retrieved_score ?? meta.maxSimilarityScore
+    if (s != null) {
+      const n = Number(s)
+      if (Number.isFinite(n)) return n
+    }
+  }
+
+  // 来源4：从 graphSources 取（兜底）
+  const graphs = structured.graphSources
+  if (Array.isArray(graphs) && graphs.length > 0) {
+    const score = graphs[0]?.score
+    if (score != null) {
+      const n = Number(score)
+      if (Number.isFinite(n)) return n
+    }
+  }
+
+  // 来源5：兜底模式检查 - 如果有 fallback 但没有 score，说明 RAG 服务不可用
+  // 返回特殊标记 -1 表示检索不可用（而非 null 表示无数据）
+  if (structured.fallback === true) {
+    return -1  // 特殊值：-1 表示检索服务不可用
+  }
+
+  return null
+}
+
+/** el-tag type：便于一眼区分检索强弱（阈值可按业务调） */
+function retrievalScoreTagType(score) {
+  if (score == null || !Number.isFinite(score)) return 'info'
+  if (score === -1) return 'info'  // 检索服务不可用
+  if (score >= 0.35) return 'success'
+  if (score >= 0.18) return 'warning'
+  return 'danger'
+}
+
+/** 格式化分数显示文本 */
+function formatRetrievalScore(score) {
+  if (score == null) return '--'
+  if (score === -1) return '不可用'  // 检索服务不可用
+  if (!Number.isFinite(score)) return '--'
+  // 保留两位小数
+  return score.toFixed(2)
+}
+
+/** 获取检索详情列表（用于检索详情下拉框展示） */
+function getRetrievalDetails(message) {
+  // 支持传入 structured 对象或整个 message 对象
+  const structured = message?.structured ?? message
+  if (!structured) return []
+
+  // 优先从 citedKnowledgeSources 获取（Spring Boot 返回的字段）
+  const citedSources = structured.citedKnowledgeSources || []
+  if (Array.isArray(citedSources) && citedSources.length > 0) {
+    return citedSources.map((item, idx) => ({
+      id: item.id || `ref-${idx}`,
+      title: item.title || '未知标题',
+      source: item.source || '',
+      score: Number(item.score) || 0,
+      rerankScore: item.rerankScore ?? item.rerank_score ?? null,
+      content: item.content || '',
+      metadata: item.metadata || {}
+    }))
+  }
+
+  // 从 knowledgeSources 获取（转换后的字段）
+  const knowledgeSources = structured.knowledgeSources || []
+  if (Array.isArray(knowledgeSources) && knowledgeSources.length > 0) {
+    return knowledgeSources.map((item, idx) => ({
+      id: item.id || `ref-${idx}`,
+      title: item.title || '未知标题',
+      source: item.source || '',
+      score: Number(item.score) || 0,
+      rerankScore: item.rerankScore ?? item.rerank_score ?? null,
+      content: item.content || '',
+      metadata: item.metadata || {}
+    }))
+  }
+
+  // 从 references 获取（后端返回的完整引用列表）
+  const references = structured.references || []
+  if (Array.isArray(references) && references.length > 0) {
+    return references.map((item, idx) => ({
+      id: item.id || `ref-${idx}`,
+      title: item.title || '未知标题',
+      source: item.source || '',
+      score: Number(item.score) || 0,
+      rerankScore: item.rerankScore ?? item.rerank_score ?? null,
+      content: item.content || '',
+      metadata: item.metadata || {}
+    }))
+  }
+
+  // 从 retrievalMetadata.all_scores 获取（按索引匹配）
+  const meta = structured.retrievalMetadata || {}
+  if (meta.all_scores && Array.isArray(meta.all_scores) && meta.all_scores.length > 0) {
+    // 生成默认条目，分数从 all_scores 获取
+    return meta.all_scores.map((score, idx) => ({
+      id: `meta-ref-${idx}`,
+      title: `检索结果 #${idx + 1}`,
+      source: `qdrant://${meta.target_collections?.[0] || 'unknown'}`,
+      score: Number(score) || 0,
+      rerankScore: null,
+      content: '',
+      metadata: { intent_domain: meta.intent_domain || 'general' }
+    }))
+  }
+
+  return []
+}
+
+/** 根据向量相似度分数返回对应的 el-tag type */
+function getScoreTagType(score) {
+  if (score == null || !Number.isFinite(score)) return 'info'
+  if (score >= 0.35) return 'success'
+  if (score >= 0.18) return 'warning'
+  return 'danger'
+}
+
+/** 截断内容文本以便于展示 */
+function truncateContent(text, maxLength = 200) {
+  if (!text) return ''
+  if (text.length <= maxLength) return text
+  return text.substring(0, maxLength) + '...'
+}
+
+/** 去掉 AI 回答中的 Markdown 标记，转成纯文本 + 符号列表展示 */
+function stripMarkdown(text) {
+  return String(text || '')
+    .replace(/\r\n/g, '\n')
+    .replace(/^\s*#{1,6}\s*/gm, '')
+    .replace(/^\s*([-*_])\1{2,}\s*$/gm, '')
+    .replace(/^\s*[-*+•]\s+/gm, '• ')
+    .replace(/\*\*(.+?)\*\*/g, '$1')
+    .replace(/__(.+?)__/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/\*+/g, '')
+    .replace(/_{2,}/g, '')
+    .replace(/[ \t]+$/gm, '')
+    .trim()
+}
+
+/** 将长文拆成多段排版：按空行分段，段内换行交给 CSS 保留 */
+function answerParagraphs(text) {
+  const s = stripMarkdown(text)
+  if (!s) return []
+  const parts = s
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+  return parts.length ? parts : [s]
 }
 
 async function fetchLatestWarning() {
@@ -694,12 +867,19 @@ async function fetchLatestWarning() {
 }
 
 async function sendQuestion(question, mode = currentMode.value) {
-  streamingMsgId.value = null
-  streamPhase.value = 'idle'
   appendMessage('user', question)
   sending.value = true
 
   try {
+    if (shouldUseGeneralAiChat(mode, question)) {
+      const chatResp = await sendAiChatApi({
+        question,
+        relatedModule: 'GENERAL'
+      })
+      appendMessage('assistant', chatResp?.answer || '你好，我在。')
+      return
+    }
+
     const useBusinessContext = mode !== 'knowledge'
     const response = await sendAiRagChatApi({
       query: question,
@@ -709,31 +889,35 @@ async function sendQuestion(question, mode = currentMode.value) {
       relatedFarmlandId: useBusinessContext ? latestWarning.value?.farmlandId : undefined
     })
 
-    const assistantId = appendMessage('assistant', '', normalizeStructuredResponse(response))
-    streamingMsgId.value = assistantId
-    streamPhase.value = 'summary'
+    appendMessage('assistant', '', normalizeStructuredResponse(response, mode))
   } catch (error) {
     const detail =
       (typeof error?.message === 'string' && error.message) ||
       error?.response?.data?.message ||
       error?.msg ||
       ''
-    const assistantId = appendMessage(
+    appendMessage(
       'assistant',
       detail
-        ? `${detail}\n\n提示：请确认 rag-service 已在默认端口 9001 运行，且 Spring 的 smart-agri.rag.base-url 指向该地址；未配大模型 Key 时 rag-service 会自动使用本地 mock。`
+        ? `${detail}\n\n提示：请确认 rag-service(9001) 与 Spring 的 smart-agri.rag.base-url 已正确连通，并确保已配置真实大模型 API Key。`
         : '本次 RAG 问答调用失败，请稍后重试。'
     )
-    streamingMsgId.value = assistantId
-    streamPhase.value = 'plain'
   } finally {
     sending.value = false
   }
 }
 
-function fillSampleQuestion(item) {
-  currentMode.value = item.mode
-  inputText.value = item.label
+function shouldUseGeneralAiChat(mode, question) {
+  const text = String(question || '').trim()
+  if (!text) {
+    return false
+  }
+  // 闲聊识别与模式解耦：命中通用问候/寒暄即直连 /ai/chat
+  const isGeneral = GENERAL_CHAT_HINT_PATTERNS.some((p) => p.test(text))
+  const isAgri = AGRI_DOMAIN_HINT_PATTERNS.some((p) => p.test(text))
+  // 很短且无农业领域词，也按通用聊天处理（如：在吗、谢谢）
+  const isShortGeneral = text.length <= 8 && !isAgri
+  return (isGeneral && !isAgri) || isShortGeneral
 }
 
 function handleSampleQuestion(item) {
@@ -781,33 +965,26 @@ onMounted(async () => {
   gap: 16px;
   border: 1px solid rgba(17, 82, 62, 0.1);
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.92);
-  padding: 12px 16px;
+  background:
+    radial-gradient(circle at top right, rgba(76, 139, 245, 0.1), transparent 34%),
+    radial-gradient(circle at left bottom, rgba(23, 138, 98, 0.12), transparent 28%),
+    linear-gradient(135deg, #f6fcf8 0%, #eff8f3 56%, #f7fbf9 100%);
+  box-shadow: var(--app-shadow-hero);
+  padding: 10px 16px;
 }
 
-.ai-rag-header__main h1 {
-  margin: 0;
-  font-size: 24px;
-  color: var(--app-text);
+.ai-rag-header__main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-width: 0;
 }
 
 .ai-rag-header__main p {
-  margin: 4px 0 0;
-  font-size: 13px;
-  color: var(--app-text-secondary);
-}
-
-.ai-rag-header__graph-hint {
-  margin: 8px 0 0;
-  max-width: 920px;
+  margin: 0;
   font-size: 12px;
-  line-height: 1.55;
   color: var(--app-text-secondary);
-}
-
-.ai-rag-header__graph-hint strong {
-  color: var(--app-text);
-  font-weight: 600;
 }
 
 .ai-rag-header__meta {
@@ -823,8 +1000,8 @@ onMounted(async () => {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
   overflow: hidden;
 }
 
@@ -836,7 +1013,7 @@ onMounted(async () => {
   background:
     linear-gradient(180deg, rgba(246, 252, 248, 0.96), rgba(255, 255, 255, 0.98)),
     #fff;
-  padding: 18px;
+  padding: 14px;
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
@@ -932,7 +1109,7 @@ onMounted(async () => {
 
 .chat-list {
   display: grid;
-  gap: 14px;
+  gap: 10px;
 }
 
 .chat-item {
@@ -984,743 +1161,321 @@ onMounted(async () => {
   margin: 0;
   line-height: 1.75;
   color: var(--app-text);
+  white-space: pre-wrap;
+  word-break: break-word;
 }
 
-/* ---------- 结构化回答：分析简报 / 仪表盘布局 ---------- */
-.rag-answer-v2.rag-answer-dash {
-  position: relative;
-  padding-left: 4px;
-  border-radius: 4px;
-}
-
-.rag-answer-v2--pri-high {
-  border-left: 4px solid #f56c6c;
-}
-
-.rag-answer-v2--pri-mid {
-  border-left: 4px solid #e6a23c;
-}
-
-.rag-answer-v2--pri-low {
-  border-left: 4px solid #67c23a;
-}
-
-.rag-dash__masthead {
+/* ---------- RAG 结构化回答 ---------- */
+.rag-answer-min {
   display: flex;
-  flex-wrap: wrap;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rag-answer-min__head {
+  display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
-  padding: 10px 12px;
+  padding-bottom: 2px;
+  border-bottom: 1px solid rgba(17, 82, 62, 0.08);
+}
+
+.rag-answer-min__head-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(22, 101, 72, 0.88);
+}
+
+.rag-answer-min__head-ic {
+  font-size: 18px;
+  color: rgba(28, 146, 102, 0.85);
+}
+
+.rag-answer-min__ic {
+  margin-right: 4px;
+  vertical-align: middle;
+}
+
+.rag-answer-min__prose {
+  padding: 2px 2px 4px;
+}
+
+.rag-answer-min__para {
+  margin: 0 0 0.85em;
+  font-size: 15px;
+  line-height: 1.82;
+  letter-spacing: 0.01em;
+  color: var(--app-text);
+  text-align: justify;
+  text-justify: inter-ideograph;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.rag-answer-min__para:last-child {
+  margin-bottom: 0;
+}
+
+.rag-answer-min__conclusion-card {
   margin: 0;
+  padding: 14px 16px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(22, 101, 72, 0.06), rgba(76, 139, 245, 0.05));
-  border: 1px solid rgba(28, 146, 102, 0.1);
+  background: linear-gradient(120deg, rgba(236, 253, 245, 0.95), rgba(248, 252, 250, 0.98));
+  border: 1px solid rgba(28, 146, 102, 0.14);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 
-.rag-dash__masthead--compact {
-  padding: 8px 12px;
-}
-
-.rag-dash__masthead-left {
-  display: flex;
-  gap: 10px;
-  align-items: center;
-  min-width: 0;
-  flex: 1;
-}
-
-.rag-dash__logo {
-  flex-shrink: 0;
-  width: 48px;
-  height: 48px;
-  border-radius: 14px;
-  display: grid;
-  place-items: center;
-  background: linear-gradient(145deg, #1c9266, #157a55);
-  color: #f0fff8;
-  box-shadow: 0 6px 16px rgba(28, 146, 102, 0.35);
-}
-
-.rag-dash__logo--sm {
-  width: 36px;
-  height: 36px;
-  border-radius: 10px;
-  box-shadow: 0 3px 10px rgba(28, 146, 102, 0.28);
-}
-
-.rag-dash__masthead-text {
-  min-width: 0;
-}
-
-.rag-dash__title-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px 10px;
-  margin-bottom: 4px;
-}
-
-.rag-dash__time {
+.rag-answer-min__conclusion-card__hd {
   font-size: 12px;
-  color: var(--app-text-secondary);
-  font-weight: 500;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: rgba(22, 101, 72, 0.75);
+  text-transform: none;
+  margin-bottom: 8px;
 }
 
-.rag-dash__masthead-inline {
+.rag-answer-min__conclusion-card__body {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.75;
+  color: rgba(15, 52, 40, 0.88);
+}
+
+.rag-answer-min__meta-panel {
+  padding: 8px 12px;
+  border-radius: 12px;
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(17, 82, 62, 0.08);
+}
+
+.rag-answer-min__meta-panel__title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(22, 101, 72, 0.8);
+  margin-bottom: 6px;
+}
+
+.rag-answer-min__meta-panel__tags {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px;
 }
 
-.rag-dash__urgency-inline {
-  font-size: 11px;
-  color: var(--app-text-secondary);
-  margin-left: 4px;
+.rag-answer-min__score-tag {
+  font-variant-numeric: tabular-nums;
 }
 
-.rag-dash__urgency-inline strong {
-  margin-left: 4px;
-  font-size: 12px;
-}
-
-.rag-dash__badge {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #fff;
-  background: linear-gradient(90deg, #1c9266, #2aab7a);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.rag-dash__mode {
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--app-text);
-}
-
-.rag-dash__focal {
-  margin-top: 2px;
-  padding: 14px 16px 16px;
-  border-radius: 16px;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 252, 249, 0.96));
-  border: 1px solid rgba(28, 146, 102, 0.18);
-  box-shadow: 0 4px 20px rgba(15, 52, 40, 0.06);
-}
-
-.rag-dash__focal-pull {
-  margin: 0 0 14px;
-  padding: 12px 14px;
-  border-radius: 12px;
-  border-left: 4px solid #1c9266;
-  background: rgba(28, 146, 102, 0.07);
-  font-size: 16px;
-  font-weight: 700;
-  line-height: 1.55;
-  color: #0d3d2c;
-}
-
-.rag-dash__hero--inset {
-  margin: 0;
-  padding: 0;
-  border: none;
-  background: transparent;
-  box-shadow: none;
-}
-
-.rag-answer-v2__lead--compact {
-  font-size: 14px;
-  line-height: 1.75;
-  color: var(--app-text);
-  font-weight: 400;
-}
-
-.rag-dash__evidence {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-}
-
-.rag-dash__signals-panel {
-  margin-top: 6px;
-  border-radius: 14px;
-  border: 1px solid rgba(28, 146, 102, 0.14);
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(246, 252, 249, 0.88));
-  overflow: hidden;
-  box-shadow: 0 2px 12px rgba(15, 52, 40, 0.04);
-}
-
-.rag-dash__signals-panel-kpis {
-  padding: 8px 10px;
-}
-
-.rag-dash__evidence--panel .rag-dash__evidence-item {
-  padding: 8px 6px;
-}
-
-.rag-dash__evidence--panel .rag-dash__evidence-n {
-  font-size: 18px;
-}
-
-.rag-dash__evidence-item {
-  text-align: center;
-  padding: 10px 8px;
-  border-radius: 12px;
-  background: rgba(255, 255, 255, 0.85);
-  border: 1px solid rgba(17, 82, 62, 0.08);
-}
-
-.rag-dash__evidence-n {
-  display: block;
-  font-size: 22px;
-  font-weight: 800;
-  color: #1c9266;
-  line-height: 1.2;
-}
-
-.rag-dash__evidence-t {
-  font-size: 11px;
-  color: var(--app-text-secondary);
-  margin-top: 2px;
-  display: block;
-}
-
-.rag-dash__hero .rag-dash__hero-bar {
+.rag-answer-min__source-foot {
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
-  margin-bottom: 4px;
-}
-
-.rag-dash__hero .rag-answer-v2__hero-label {
-  margin-bottom: 0;
-}
-
-.rag-dash__btn-ic {
-  margin-right: 4px;
-  vertical-align: middle;
-}
-
-.rag-dash__section-title {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--app-text);
-}
-
-.rag-dash__section-title--accent {
-  color: #157a55;
-}
-
-.rag-dash__section-title--tight {
-  margin-bottom: 8px;
-  flex-wrap: wrap;
-}
-
-.rag-dash__biz-snapshot-hint {
-  margin-left: auto;
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--app-text-secondary);
-  opacity: 0.85;
-}
-
-.rag-dash__section-icon {
-  font-size: 10px;
-  opacity: 0.65;
-}
-
-.rag-dash__section-ic {
-  color: #e6a23c;
-}
-
-.rag-dash__biz-snapshot {
-  padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.65);
-  border: 1px dashed rgba(28, 146, 102, 0.22);
-}
-
-.rag-dash__biz-snapshot--panel {
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  border-top: 1px solid rgba(28, 146, 102, 0.12);
-  background: rgba(28, 146, 102, 0.04);
-  padding: 10px 12px 12px;
-}
-
-.rag-dash__biz-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-@media (max-width: 900px) {
-  .rag-dash__biz-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (max-width: 520px) {
-  .rag-dash__biz-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.rag-dash__biz-card {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--app-text);
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(28, 146, 102, 0.06);
-  border: 1px solid rgba(28, 146, 102, 0.1);
-}
-
-.rag-dash__timeline-wrap {
-  padding: 4px 0;
-}
-
-.rag-dash__timeline {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-}
-
-.rag-dash__timeline-item {
-  display: flex;
-  gap: 12px;
   align-items: flex-start;
-  padding: 12px 0;
-  border-bottom: 1px solid rgba(17, 82, 62, 0.06);
-}
-
-.rag-dash__timeline-item:last-child {
-  border-bottom: none;
-}
-
-.rag-dash__timeline-idx {
-  flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #1c9266, #29a770);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 700;
-  display: grid;
-  place-items: center;
-  box-shadow: 0 2px 8px rgba(28, 146, 102, 0.3);
-}
-
-.rag-dash__timeline-body {
-  margin: 0;
-  flex: 1;
-  font-size: 14px;
-  line-height: 1.7;
-  color: var(--app-text);
-  padding-top: 2px;
-}
-
-.rag-dash__causes {
+  gap: 10px;
   padding: 12px 14px;
-  border-radius: 14px;
-  background: rgba(230, 162, 60, 0.06);
-  border: 1px solid rgba(230, 162, 60, 0.2);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  border: 1px dashed rgba(17, 82, 62, 0.14);
 }
 
-.rag-dash__cause-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
+.rag-answer-min__source-foot__ic {
+  flex-shrink: 0;
+  margin-top: 2px;
+  font-size: 18px;
+  color: rgba(28, 146, 102, 0.75);
 }
 
-.rag-dash__cause-list li {
-  position: relative;
-  padding: 8px 0 8px 18px;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--app-text);
-  border-bottom: 1px solid rgba(230, 162, 60, 0.12);
-}
-
-.rag-dash__cause-list li:last-child {
-  border-bottom: none;
-}
-
-.rag-dash__cause-list li::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 14px;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #e6a23c;
-  opacity: 0.85;
-}
-
-.rag-dash__kb-row {
-  flex-direction: row !important;
-  align-items: flex-start !important;
-  justify-content: space-between;
-  gap: 12px !important;
-}
-
-.rag-dash__kb-main {
+.rag-answer-min__source-foot__main {
   flex: 1;
   min-width: 0;
 }
 
-.rag-dash__kb-score {
-  flex-shrink: 0;
-  width: 120px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  align-items: flex-end;
-}
-
-.rag-dash__kb-score-txt {
-  font-size: 10px;
-  color: var(--app-text-secondary);
-}
-
-.rag-dash__footer {
-  margin-top: 6px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(17, 82, 62, 0.04);
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px 16px;
-  justify-content: space-between;
-  font-size: 11px;
-  color: var(--app-text-secondary);
-}
-
-.rag-dash__footer-brand {
-  font-weight: 600;
-  color: rgba(22, 101, 72, 0.85);
-}
-
-.rag-dash__footer-disclaimer {
-  max-width: 520px;
-  line-height: 1.45;
-}
-
-.rag-answer-v2 {
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-}
-
-.rag-answer-v2__hero {
-  padding: 14px 16px;
-  border-radius: 14px;
-  background: linear-gradient(145deg, rgba(28, 146, 102, 0.09), rgba(76, 139, 245, 0.06));
-  border: 1px solid rgba(28, 146, 102, 0.14);
-}
-
-.rag-answer-v2__hero-label {
-  margin: 0 0 8px;
+.rag-answer-min__source-foot__label {
+  display: block;
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 0.08em;
-  color: rgba(22, 101, 72, 0.85);
-  text-transform: uppercase;
-}
-
-.rag-answer-v2__lead {
-  margin: 0;
-  font-size: 15px;
-  line-height: 1.7;
-  color: var(--app-text);
-  font-weight: 500;
-}
-
-.rag-answer-v2__conclusion {
-  margin-top: 12px;
-  padding-top: 12px;
-  border-top: 1px solid rgba(17, 82, 62, 0.1);
-}
-
-.rag-answer-v2__conclusion-label {
-  margin: 0 0 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--app-text-secondary);
-}
-
-.rag-answer-v2__conclusion-text {
-  margin: 0;
-  font-size: 14px;
-  line-height: 1.65;
-  color: var(--app-text);
-}
-
-.rag-answer-v2__block {
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(251, 254, 252, 0.95);
-  border: 1px solid rgba(17, 82, 62, 0.08);
-}
-
-.rag-answer-v2__block--primary {
-  border-color: rgba(28, 146, 102, 0.22);
-  background: rgba(28, 146, 102, 0.04);
-}
-
-.rag-answer-v2__block-title {
-  margin: 0 0 10px;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--app-text);
-}
-
-.rag-answer-v2__steps {
-  margin: 0;
-  padding-left: 1.2em;
-  color: var(--app-text);
-  line-height: 1.75;
-  font-size: 14px;
-}
-
-.rag-answer-v2__steps li {
-  margin-bottom: 6px;
-}
-
-.rag-answer-v2__steps li:last-child {
-  margin-bottom: 0;
-}
-
-.rag-answer-v2__bullets {
-  margin: 0;
-  padding-left: 1.2em;
-  color: var(--app-text);
-  line-height: 1.7;
-  font-size: 13px;
-}
-
-.rag-answer-v2__bullets li {
+  color: rgba(22, 101, 72, 0.65);
   margin-bottom: 4px;
 }
 
-.rag-answer-v2__collapse {
-  border: none;
-  --el-collapse-border-color: transparent;
+.rag-answer-min__source-foot__text {
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--app-text-secondary);
+  word-break: break-word;
 }
 
-.rag-answer-v2__collapse :deep(.el-collapse-item__header) {
-  font-size: 13px;
+.rag-answer-min__graph-pill {
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.rag-answer-min__source-label {
+  display: inline-block;
+  margin-right: 8px;
   font-weight: 600;
-  color: var(--app-text);
-  background: rgba(248, 250, 249, 0.9);
-  border-radius: 10px;
-  padding: 0 12px;
-  height: 42px;
-  border: 1px solid rgba(17, 82, 62, 0.08);
+  color: rgba(22, 101, 72, 0.85);
 }
 
-.rag-answer-v2__collapse :deep(.el-collapse-item__wrap) {
-  border: none;
-  background: transparent;
+.rag-answer-min__kg-strip {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px dashed rgba(17, 82, 62, 0.12);
+  font-size: 13px;
+  color: var(--app-text-secondary);
 }
 
-.rag-answer-v2__collapse :deep(.el-collapse-item__content) {
-  padding: 10px 4px 4px;
+.rag-answer-min__kg-strip__hint {
+  margin-left: 6px;
+  font-size: 12px;
+  color: rgba(22, 101, 72, 0.55);
 }
 
-.rag-answer-v2__collapse-body {
-  padding: 4px 0 2px;
-}
-
-.rag-answer-v2__chips {
+.rag-answer-min__kg-chips {
+  margin-top: 6px;
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 4px 10px;
 }
 
-.rag-answer-v2__chip {
-  border-radius: 999px;
-  background: rgba(28, 146, 102, 0.1);
-  color: var(--app-text);
-  padding: 6px 10px;
-  font-size: 12px;
-  line-height: 1.4;
-}
-
-.rag-answer-v2__risk-list {
-  margin: 10px 0 0;
-  padding-left: 1.2em;
-  font-size: 13px;
-  line-height: 1.65;
-  color: var(--app-text);
-}
-
-.rag-answer-v2__kb-hint {
-  margin: 0 0 10px;
-  font-size: 12px;
-  line-height: 1.6;
-  color: var(--app-text-secondary);
-}
-
-.rag-answer-v2__kb-list {
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.rag-answer-v2__kb-list li {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  padding: 8px 0;
-  border-bottom: 1px solid rgba(17, 82, 62, 0.06);
-  font-size: 13px;
-}
-
-.rag-answer-v2__kb-list li:last-child {
-  border-bottom: none;
-}
-
-.rag-answer-v2__kb-title {
-  color: var(--app-text);
-  line-height: 1.5;
-}
-
-.rag-answer-v2__kb-meta {
-  font-size: 11px;
-  color: var(--app-text-secondary);
-}
-
-.rag-answer-v2__fallback {
+.rag-answer-min__fallback {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
   color: #8a5a00;
 }
 
-.rag-answer-v2__graph-strip {
-  padding: 12px 14px;
+/* ========== 检索详情面板 ========== */
+.rag-answer-min__retrieval-panel {
+  margin-top: 12px;
   border-radius: 12px;
-  border: 1px solid rgba(28, 146, 102, 0.28);
-  background: rgba(28, 146, 102, 0.06);
+  background: rgba(248, 250, 252, 0.95);
+  border: 1px solid rgba(17, 82, 62, 0.1);
 }
 
-.rag-answer-v2__graph-strip-head {
+.retrieval-panel__title {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-  margin-bottom: 10px;
-}
-
-.rag-answer-v2__graph-strip-desc {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--app-text-secondary);
-  flex: 1;
-  min-width: 200px;
-}
-
-.rag-answer-v2__graph-chips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.rag-graph-chip {
-  display: inline-flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid rgba(28, 146, 102, 0.35);
-  background: #fff;
-  cursor: pointer;
-  text-align: left;
-  transition:
-    border-color 0.15s ease,
-    box-shadow 0.15s ease;
-}
-
-.rag-graph-chip:hover {
-  border-color: rgba(28, 146, 102, 0.65);
-  box-shadow: 0 2px 8px rgba(28, 146, 102, 0.12);
-}
-
-.rag-graph-chip__name {
   font-size: 13px;
   font-weight: 600;
-  color: var(--app-text);
+  color: rgba(22, 101, 72, 0.8);
 }
 
-.rag-graph-chip__meta {
+.retrieval-panel__count {
+  font-weight: 400;
+  color: rgba(55, 65, 81, 0.6);
+  font-size: 12px;
+}
+
+.retrieval-detail-list {
+  padding: 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.retrieval-detail-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(17, 82, 62, 0.08);
+  transition: all 0.2s ease;
+}
+
+.retrieval-detail-item:hover {
+  border-color: rgba(28, 146, 102, 0.2);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+}
+
+.retrieval-detail-item__header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 6px;
+  flex-wrap: wrap;
+}
+
+.retrieval-detail-item__index {
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(28, 146, 102, 0.75);
+  min-width: 24px;
+}
+
+.retrieval-detail-item__title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--app-text);
+  flex: 1;
+  min-width: 120px;
+}
+
+.retrieval-detail-item__source {
+  font-size: 12px;
+  color: rgba(55, 65, 81, 0.7);
+  margin-bottom: 4px;
+}
+
+.retrieval-detail-item__source-label {
+  font-weight: 600;
+}
+
+.retrieval-detail-item__source-value {
+  font-family: monospace;
   font-size: 11px;
-  color: var(--app-text-secondary);
+  color: rgba(28, 146, 102, 0.7);
+  background: rgba(236, 253, 245, 0.5);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.retrieval-detail-item__content {
+  font-size: 12px;
+  color: rgba(55, 65, 81, 0.8);
+  line-height: 1.6;
+}
+
+.retrieval-detail-item__content-label {
+  font-weight: 600;
+  margin-right: 6px;
+}
+
+.retrieval-detail-item__content-text {
+  word-break: break-word;
+}
+
+.retrieval-detail-item__meta {
+  margin-top: 6px;
+  display: flex;
+  gap: 6px;
 }
 
 .ai-rag-composer {
   flex-shrink: 0;
   display: grid;
-  gap: 12px;
+  gap: 8px;
   border: 1px solid rgba(17, 82, 62, 0.1);
   border-radius: 18px;
   background: rgba(255, 255, 255, 0.96);
-  padding: 14px;
+  padding: 10px 12px;
 }
 
 .ai-rag-composer__top {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
 }
 
-.composer-context {
-  font-size: 12px;
-  color: var(--app-text-secondary);
-}
-
-.quick-question-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-}
-
-.quick-question-btn {
-  border: 1px solid rgba(17, 82, 62, 0.12);
-  border-radius: 999px;
-  background: #f7fbf8;
-  color: var(--app-text);
-  font-size: 12px;
-  padding: 7px 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.quick-question-btn:hover {
-  border-color: rgba(28, 146, 102, 0.24);
-  background: #eef8f2;
-}
-
 .ai-rag-composer :deep(.el-textarea__inner) {
-  min-height: 148px !important;
+  min-height: 96px !important;
   border-radius: 14px;
   font-size: 14px;
   line-height: 1.7;
@@ -1732,7 +1487,7 @@ onMounted(async () => {
   gap: 10px;
 }
 
-@media (max-width: 1080px) {
+@container app-content (max-width: 820px) {
   .welcome-mode-cards,
   .welcome-samples {
     grid-template-columns: 1fr;
@@ -1744,7 +1499,7 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 1024px) {
+@container app-content (max-width: 780px) {
   .ai-rag-page {
     flex: none;
     min-height: 0;
@@ -1764,7 +1519,7 @@ onMounted(async () => {
   }
 }
 
-@media (max-width: 768px) {
+@container app-content (max-width: 700px) {
   .ai-rag-dialogue {
     max-height: min(65vh, 560px);
     min-height: 240px;
@@ -1778,19 +1533,6 @@ onMounted(async () => {
 
   .ai-rag-composer__top {
     align-items: flex-start;
-  }
-
-  .rag-dash__evidence {
-    grid-template-columns: 1fr;
-  }
-
-  .rag-dash__masthead-right {
-    width: 100%;
-  }
-
-  .rag-dash__kb-score {
-    width: 100%;
-    align-items: stretch;
   }
 }
 </style>

@@ -139,6 +139,8 @@ async function handleLogin() {
     await userStore.login(form)
     ElMessage.success('登录成功，正在进入首页')
     router.push('/dashboard')
+  } catch (error) {
+    ElMessage.error(error?.message || '登录失败，请检查后端服务与数据库连接')
   } finally {
     loading.value = false
   }
